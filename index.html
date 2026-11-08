@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>จัดการรูปภาพ</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#fff; --text:#1d2330; --muted:#667085; --line:#e3e6eb;
+  --accent:#2563eb; --accent-soft:#e8efff; --keep:#16a34a; --keep-soft:#e7f7ec;
+  --drop:#dc2626; --drop-soft:#fdecec; --warn:#b45309;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#14161b; --card:#1d2027; --text:#e7e9ee; --muted:#9aa3b2; --line:#2c3039;
+  --accent:#6b9bff; --accent-soft:#1f2a44; --keep:#4ade80; --keep-soft:#173322;
+  --drop:#f87171; --drop-soft:#3a1d1d; --warn:#fbbf24;}
+}
+:root[data-theme="dark"]{--bg:#14161b; --card:#1d2027; --text:#e7e9ee; --muted:#9aa3b2; --line:#2c3039;
+  --accent:#6b9bff; --accent-soft:#1f2a44; --keep:#4ade80; --keep-soft:#173322;
+  --drop:#f87171; --drop-soft:#3a1d1d; --warn:#fbbf24;}
+
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI","Leelawadee UI",Tahoma,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+header{padding:18px 24px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
+h1{margin:0 0 4px;font-size:20px}
+.sub{color:var(--muted);font-size:13px}
+main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:8px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.danger{background:var(--drop);border-color:var(--drop);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+label{display:inline-flex;gap:6px;align-items:center}
+input[type=range]{width:160px}
+.progress{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:10px}
+.progress>div{height:100%;width:0;background:var(--accent);transition:width .15s}
+#status{margin-top:8px;color:var(--muted);font-size:13px}
+.summary{display:flex;gap:24px;flex-wrap:wrap}
+.stat b{display:block;font-size:22px}
+.stat span{color:var(--muted);font-size:13px}
+.group{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.ghead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.badge{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin-left:6px}
+.badge.exact{background:var(--drop-soft);color:var(--drop)}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.item{border:2px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;background:var(--bg);position:relative}
+.item.keep{border-color:var(--keep)}
+.item.drop{border-color:var(--drop);opacity:.8}
+.item .thumb{width:100%;aspect-ratio:4/3;object-fit:contain;background:#0002;display:block}
+.item .meta{padding:8px;font-size:12px;line-height:1.5;word-break:break-all}
+.item .name{font-weight:600;font-size:13px}
+.item .path{color:var(--muted)}
+.tag{position:absolute;top:6px;left:6px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;color:#fff}
+.keep .tag{background:var(--keep)} .drop .tag{background:var(--drop)}
+.zoom{position:absolute;top:6px;right:6px;padding:2px 8px;font-size:12px;background:#000a;color:#fff;border:none}
+.toolbar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 24px;display:none;z-index:5}
+.toolbar.show{display:block}
+.toolbar .inner{max-width:1400px;margin:0 auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal.show{display:flex}
+.modal .box{background:var(--card);border-radius:12px;padding:20px;max-width:520px;width:100%}
+.modal .box h2{margin-top:0;font-size:18px}
+.modal input[type=text]{font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;width:100%;background:var(--bg);color:var(--text)}
+#viewer img{max-width:95vw;max-height:90vh;object-fit:contain}
+.why{font-size:13px;background:var(--keep-soft);border-radius:8px;padding:8px 10px;margin-bottom:10px}
+.rec{color:var(--keep);font-weight:600}
+.result{border:2px solid var(--keep)}
+.tablewrap{max-height:420px;overflow:auto;margin-top:8px;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);word-break:break-all;vertical-align:top}
+th{position:sticky;top:0;background:var(--card)}
+tr.fail td{color:var(--drop)}
+summary{cursor:pointer;color:var(--accent)}
+.tabs{display:flex;gap:6px;margin-top:12px}
+.tab{border-radius:8px 8px 0 0;border-bottom:none}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+body.fb .toolbar{display:none!important}
+.num{width:80px;font:inherit;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text)}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ba figure{margin:0}.ba figcaption{font-size:12px;color:var(--muted);margin-bottom:4px}
+.ba .crop{height:320px;overflow:hidden;border:1px solid var(--line);border-radius:6px;background:#0002;position:relative}
+.ba .crop img{position:absolute;image-rendering:auto}
+.badge.burst{background:#fff4d6;color:#92400e}
+.help{margin-top:12px;font-size:13px;line-height:1.7;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.mobilenote{margin-top:10px;font-size:13px;line-height:1.7;background:var(--accent-soft);border-radius:8px;padding:10px 12px}
+.sheet{position:fixed;inset:0;background:var(--bg);z-index:15;display:none;flex-direction:column}
+.sheet.show{display:flex}
+.sheethead{display:flex;gap:8px;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+.sheetbody{overflow:auto;padding:16px;flex:1;max-width:900px;width:100%;margin:0 auto}
+.dday{font-weight:700;margin:18px 0 8px;font-size:14px}
+.drow{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px}
+.drow.done{opacity:.45}
+.drow.done .dinfo b{text-decoration:line-through}
+.dthumb{width:84px;height:84px;object-fit:cover;border-radius:6px;border:3px solid var(--drop);flex:none;background:#0002}
+.dkeep{width:48px;height:48px;object-fit:cover;border-radius:6px;border:3px solid var(--keep);flex:none;background:#0002}
+.dinfo{flex:1;font-size:12px;line-height:1.5;word-break:break-all;min-width:0}
+.dinfo b{font-size:13px}
+.dcheck{display:flex;flex-direction:column;align-items:center;font-size:11px;gap:2px;flex:none}
+.dcheck input{width:26px;height:26px}
+.savebtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+@media (max-width:700px){
+  header{padding:12px 14px;position:static}
+  main{padding:12px}
+  .panel{padding:12px}
+  .items{grid-template-columns:repeat(2,1fr);gap:8px}
+  .item .meta{font-size:11px;padding:6px}
+  .toolbar{padding:10px 12px}
+  .toolbar .inner{gap:8px}
+  .toolbar #tbInfo{width:100%;font-size:13px}
+  .toolbar button{flex:1;padding:10px 8px}
+  .summary{gap:16px}
+  .stat b{font-size:18px}
+  .ba{grid-template-columns:1fr}
+  input[type=range]{width:120px}
+  .tab{padding:8px 10px;font-size:14px}
+  button{padding:10px 12px}
+}
+.sel{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);margin-top:4px}
+.note{font-size:13px;color:var(--warn)}
+.empty{text-align:center;color:var(--muted);padding:40px}
+.pager{display:flex;gap:8px;justify-content:center;align-items:center;margin:10px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>จัดการรูปภาพ</h1>
+  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 8</div>
+  <nav class="tabs"><button class="tab on" data-tab="tabDup">🔍 ค้นหารูปซ้ำ</button><button class="tab" data-tab="tabFb">📐 ย่อรูปลง Facebook</button></nav>
+</header>
+
+<main id="tabDup">
+  <div class="panel">
+    <div class="row">
+      <button class="primary" id="pickBtn">📁 เลือกโฟลเดอร์รูป</button>
+      <label><input type="checkbox" id="optSub" checked> รวมโฟลเดอร์ย่อย</label>
+      <label><input type="checkbox" id="optNear" checked> หารูปที่คล้ายกันด้วย (เช่น ย่อขนาด/บีบอัดใหม่)</label>
+      <label title="ยิ่งค่าสูง ยิ่งจับรูปที่ต่างกันเล็กน้อยได้มากขึ้น แต่อาจจับผิดได้">ความเข้มงวด:
+        <input type="range" id="optThr" min="0" max="16" value="6">
+        <span id="thrVal"></span></label>
+      <label title="จับกลุ่มรูปที่ถ่ายต่อเนื่องกัน (ชื่อไฟล์เรียงติดกัน ฉากเดียวกัน แต่ท่าทางต่างกันเล็กน้อย) แล้วเลือกเก็บรูปที่คมชัดที่สุด"><input type="checkbox" id="optBurst"> หาภาพถ่ายต่อเนื่อง (ถ่ายรัว / ฉากเดียวกัน)</label>
+      <label id="burstWrap" style="display:none" title="ยิ่งค่าสูง ยิ่งจับรูปที่ต่างกันมากขึ้น">ความต่างที่ยอมได้:
+        <input type="range" id="optBurstThr" min="8" max="28" value="16"><span id="burstVal"></span></label>
+      <button id="rescanBtn" disabled>🔄 สแกนใหม่</button>
+    </div>
+    <div class="help">
+      <div><b>ความเข้มงวด</b> (ใช้กับ "รูปคล้ายกัน"): บอกว่ารูปสองรูปต่างกันได้แค่ไหนถึงยังนับว่าเป็นรูปเดียวกัน
+        <br>• <b>ค่าต่ำ</b> = จับเฉพาะรูปที่เหมือนกันเกือบทุกจุด เช่น รูปเดียวกันที่ถูกย่อหรือบีบอัดใหม่ (ปลอดภัย แต่อาจหลุดบางรูป)
+        <br>• <b>ค่าสูง</b> = จับรูปที่ต่างกันมากขึ้น (เจอเยอะขึ้น แต่อาจรวมรูปที่ไม่ใช่รูปเดียวกันมาด้วย)
+        <br><span class="rec">แนะนำ 4–8</span> · ตอนนี้: <span id="thrDesc"></span></div>
+      <div id="burstHelp" style="display:none;margin-top:6px"><b>ความต่างที่ยอมได้</b> (ใช้กับ "ภาพถ่ายต่อเนื่อง"): ยอมให้ภาพในชุดถ่ายรัวต่างกันได้แค่ไหน เช่น คนขยับท่า กล้องเลื่อนเล็กน้อย
+        <br>• <b>ค่าต่ำ</b> = จับเฉพาะภาพที่แทบไม่ขยับ
+        <br>• <b>ค่าสูง</b> = จับภาพที่ขยับมากขึ้น แต่อาจดึงฉากอื่นที่ถ่ายต่อกันมาปน
+        <br><span class="rec">แนะนำ 14–18</span> · ตอนนี้: <span id="burstDesc"></span></div>
+      <div class="sub" style="margin-top:6px">เลื่อนแถบแล้วผลจะอัปเดตทันที ไม่ต้องสแกนใหม่</div>
+    </div>
+    <div class="progress"><div id="bar"></div></div>
+    <div id="status">ยังไม่ได้เลือกโฟลเดอร์</div>
+    <div id="ffNote" class="mobilenote" style="display:none">
+      📱 <b>โหมดมือถือ:</b> กด "เลือกรูปจากอัลบั้ม" แล้วเลือกได้ทีละหลายรูป (บน iPhone กดค้างแล้วลากนิ้วเพื่อเลือกหลายรูปได้เร็ว)
+      เว็บลบรูปในอัลบั้มให้โดยตรงไม่ได้ แอปจะทำ <b>รายการรูปที่ต้องลบ</b> พร้อมรูปย่อและวันเวลาที่ถ่าย ให้ไปลบเองในแอป Photos (iPhone) หรือ Gallery / Google Photos (Android)
+    </div>
+    <input type="file" id="fallbackInput" accept="image/*" multiple style="display:none">
+  </div>
+
+  <div class="panel" id="summaryPanel" style="display:none">
+    <div class="summary">
+      <div class="stat"><b id="sTotal">0</b><span>รูปทั้งหมด</span></div>
+      <div class="stat"><b id="sGroups">0</b><span>กลุ่มรูปซ้ำ</span></div>
+      <div class="stat"><b id="sDrop">0</b><span>รูปที่เลือกจะเอาออก</span></div>
+      <div class="stat"><b id="sSave">0</b><span>พื้นที่ที่จะได้คืน</span></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <span class="sub">ระบบเลือกรูปที่จะเก็บให้อัตโนมัติ (ไม่เบลอ → ความละเอียดสูงสุด → ไฟล์ใหญ่สุด → เก่าสุด) คลิกที่รูปเพื่อสลับ เก็บ/เอาออก</span>
+      <span class="spacer"></span>
+      <button id="autoBtn">เลือกอัตโนมัติใหม่</button>
+      <button id="keepAllBtn">เก็บทั้งหมด</button>
+    </div>
+  </div>
+
+  <div id="result"></div>
+  <div id="groups"></div>
+</main>
+
+<main id="tabFb" hidden>
+  <div class="panel">
+    <h2 style="margin:0 0 6px;font-size:17px">ย่อรูปสำหรับลง Facebook ทีละหลายรูป</h2>
+    <div class="sub" style="margin-bottom:12px">ย่อให้ด้านยาวเท่ากับค่าที่ตั้ง แล้วดึงความคมด้วย Unsharp Mask บันทึกเป็น JPEG ในโฟลเดอร์ใหม่ <b>ต้นฉบับไม่ถูกแก้ไข</b></div>
+    <div class="row">
+      <label>ด้านยาว <input type="number" id="fbLong" value="2048" min="200" max="8000" step="1" class="num"> px</label>
+      <label>Amount <input type="number" id="fbAmt" value="150" min="0" max="500" step="10" class="num"> %</label>
+      <label>Radius <input type="number" id="fbRad" value="0.2" min="0.1" max="5" step="0.1" class="num"> px</label>
+      <label>Threshold <input type="number" id="fbThr" value="0" min="0" max="255" step="1" class="num"> levels</label>
+      <label>คุณภาพ JPEG <input type="number" id="fbQ" value="92" min="50" max="100" step="1" class="num"> %</label>
+      <label><input type="checkbox" id="fbSub" checked> รวมโฟลเดอร์ย่อย</label>
+      <button id="fbReset">ค่าเริ่มต้น</button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="primary" id="fbPickDir">📁 เลือกโฟลเดอร์รูป</button>
+      <button id="fbPickFiles">🖼 เลือกเฉพาะบางรูป</button>
+      <span class="sub" id="fbHint">รูปที่เล็กกว่าด้านยาวที่ตั้งไว้จะไม่ถูกขยาย (ขยายแล้วไม่ชัดขึ้น) แค่บันทึกเป็น JPEG ให้</span>
+    </div>
+    <div class="progress"><div id="fbBar"></div></div>
+    <div id="fbStatus" class="sub" style="margin-top:8px"></div>
+  </div>
+  <input type="file" id="fbInput" accept="image/*" multiple style="display:none">
+  <div id="fbResult"></div>
+</main>
+
+<div class="toolbar" id="toolbar">
+  <div class="inner">
+    <span id="tbInfo"></span>
+    <span class="spacer"></span>
+    <button id="csvBtn">⬇ บันทึกรายงาน CSV</button>
+    <button class="primary" id="listBtn" style="display:none">🗑 ดูรายการรูปที่ต้องลบเอง</button>
+    <button class="primary" id="moveBtn">ย้ายไปโฟลเดอร์ _duplicates</button>
+    <button class="danger" id="delBtn">ลบถาวร</button>
+  </div>
+</div>
+
+<div class="modal" id="confirm">
+  <div class="box">
+    <h2 id="cTitle"></h2>
+    <div id="cBody"></div>
+    <div id="cTypeWrap" style="margin-top:12px;display:none">
+      <div style="margin-bottom:6px">พิมพ์คำว่า <b>ลบ</b> เพื่อยืนยัน</div>
+      <input type="text" id="cType" autocomplete="off">
+    </div>
+    <div class="row" style="margin-top:16px;justify-content:flex-end">
+      <button id="cCancel">ยกเลิก</button>
+      <button class="primary" id="cOk">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="viewer"><img alt=""></div>
+
+<div class="sheet" id="delList">
+  <div class="sheethead">
+    <b style="font-size:17px">🗑 รูปที่ต้องลบเอง</b><span class="spacer"></span>
+    <button id="dlShare">⬇ บันทึกรายการ</button><button id="dlClose">✕ ปิด</button>
+  </div>
+  <div class="sheetbody">
+    <div class="help" style="margin-top:0">
+      <b>วิธีลบ</b><br>
+      1. เปิดแอป <b>Photos</b> (iPhone) หรือ <b>Gallery / Google Photos</b> (Android)<br>
+      2. ไปที่วันที่ตามหัวข้อด้านล่าง (เรียงจากเก่าไปใหม่ เหมือนในอัลบั้ม) แล้วหารูปที่ตรงกับรูปย่อสีแดง<br>
+      3. ลบรูปนั้น แล้วติ๊ก "ลบแล้ว" ที่นี่เพื่อไม่ให้สับสน · รูปสีเขียวคือรูปที่เก็บไว้แทน <b>ห้ามลบ</b><br>
+      4. รูปที่ลบจะไปอยู่ใน "ลบล่าสุด" (iPhone) หรือ "ถังขยะ" (Android) 30 วัน ถ้าต้องการพื้นที่คืนทันทีให้ลบจากที่นั่นอีกครั้ง
+    </div>
+    <div id="dlProgress" class="sub" style="margin:10px 0"></div>
+    <div id="dlItems"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const IMG_EXT = ['jpg','jpeg','png','gif','webp','bmp','avif','tif','tiff','heic','heif','jfif'];
+const DECODABLE = new Set(['jpg','jpeg','png','gif','webp','bmp','avif','jfif']);
+const DUP_DIR = '_duplicates';
+const PAGE = 50;
+
+const $ = id => document.getElementById(id);
+let rootHandle = null;     // FileSystemDirectoryHandle (null in read-only mode)
+let readOnly = false;
+let items = [];            // {id,name,path,file,parent,size,mtime,ext,sha,ph,w,h}
+let groups = [];           // [{ids:[...], exact:bool}]
+let drop = new Set();      // ids marked for removal
+let page = 0;
+let busy = false;
+
+const fmtSize = b => b < 1024 ? b+' B' : b < 1048576 ? (b/1024).toFixed(1)+' KB' : b < 1073741824 ? (b/1048576).toFixed(2)+' MB' : (b/1073741824).toFixed(2)+' GB';
+const fmtDate = t => new Date(t).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'});
+const ext = n => (n.split('.').pop()||'').toLowerCase();
+const setStatus = (t, p) => { $('status').textContent = t; if (p != null) $('bar').style.width = (p*100).toFixed(1)+'%'; };
+const tick = () => new Promise(r => setTimeout(r, 0));
+
+const descThr = v => v <= 3 ? 'เข้มงวดมาก จับเฉพาะรูปที่แทบเหมือนกันทุกจุด' : v <= 8 ? 'ระดับแนะนำ จับรูปเดียวกันที่ถูกย่อ/บีบอัด/แต่งสีเล็กน้อย' : v <= 12 ? 'หลวมขึ้น เริ่มจับรูปที่ต่างกันพอสมควร ควรตรวจดูก่อนเอาออก' : 'หลวมมาก มีโอกาสรวมรูปที่ไม่ใช่รูปเดียวกัน ตรวจดูทุกกลุ่ม';
+const descBurst = v => v <= 12 ? 'เข้มงวด จับเฉพาะภาพที่แทบไม่ขยับ' : v <= 18 ? 'ระดับแนะนำ จับภาพถ่ายรัวที่คนขยับท่าหรือกล้องเลื่อนเล็กน้อย' : v <= 22 ? 'หลวมขึ้น จับภาพที่ขยับมาก อาจมีฉากอื่นปน' : 'หลวมมาก มีโอกาสดึงฉากอื่นมาปนสูง';
+const showThr = () => { $('thrVal').textContent = $('optThr').value; $('thrDesc').textContent = descThr(+$('optThr').value); };
+showThr();
+$('optThr').oninput = showThr;
+$('optThr').onchange = () => { if (items.length && !busy) regroup(); };
+$('optNear').onchange = () => { if (items.length && !busy) regroup(); };
+const showBurst = () => { $('burstVal').textContent = $('optBurstThr').value; $('burstDesc').textContent = descBurst(+$('optBurstThr').value); };
+showBurst();
+$('optBurstThr').oninput = showBurst;
+$('optBurstThr').onchange = () => { if (items.length && !busy) regroup(); };
+$('optBurst').onchange = () => { $('burstWrap').style.display = $('burstHelp').style.display = $('optBurst').checked ? '' : 'none'; if (items.length && !busy) regroup(); };
+
+// ---------- folder selection ----------
+// Phones (and browsers without folder access) pick photos from the album instead of a folder,
+// and get a list of photos to delete by hand instead of move/delete buttons.
+let IN_FRAME = false; try { IN_FRAME = window.top !== window.self; } catch { IN_FRAME = true; }
+const MOBILE = !window.showDirectoryPicker || IN_FRAME || !!window.AndroidBridge;   // folder access is blocked inside an embedded page too
+if (MOBILE) {
+  $('pickBtn').textContent = '📷 เลือกรูปจากอัลบั้ม';
+  $('optSub').parentElement.style.display = 'none';
+  $('rescanBtn').style.display = 'none';
+  $('ffNote').style.display = '';
+  $('moveBtn').style.display = $('delBtn').style.display = 'none';
+  $('listBtn').style.display = '';
+  $('fbPickDir').style.display = 'none';
+  $('fbPickFiles').textContent = '📷 เลือกรูปจากอัลบั้ม';
+  $('status').textContent = 'ยังไม่ได้เลือกรูป';
+  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 8';
+}
+const ANDROID = !!window.AndroidBridge;
+if (ANDROID) {
+  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 8';
+  $('ffNote').innerHTML = '📱 กด "เลือกอัลบั้ม" เพื่อสแกนรูปในมือถือ แล้วกด "ย้ายไปถังขยะ" รูปที่เอาออกจะอยู่ในถังขยะของมือถือ <b>กู้คืนได้ 30 วัน</b>';
+  $('pickBtn').textContent = '📂 เลือกอัลบั้ม';
+  $('listBtn').style.display = 'none';
+  $('moveBtn').style.display = '';
+  $('moveBtn').textContent = '🗑 ย้ายไปถังขยะของมือถือ';
+  $('csvBtn').style.display = 'none';
+}
+// Back button on Android closes the open sheet/dialog first
+window.androidBack = () => {
+  for (const id of ['viewer', 'confirm']) if ($(id).classList.contains('show')) { if (id === 'confirm') $('cCancel').click(); else $(id).classList.remove('show'); return true; }
+  if ($('delList').classList.contains('show')) { $('delList').classList.remove('show'); return true; }
+  return false;
+};
+function androidPermission() {
+  if (AndroidBridge.hasPermission() || AndroidBridge.isPartial()) return Promise.resolve(true);
+  return new Promise(res => { window.onAndroidPermission = (full, partial) => res(full || partial); AndroidBridge.requestPermission(); });
+}
+function lazyFile(m) {
+  const fullUrl = `https://app.local/media/${m.id}`;
+  return { lazy:true, mediaId:m.id, name:m.name, size:m.size, type:m.mime, lastModified:m.mtime, fullUrl, thumbUrl:`https://app.local/thumb/${m.id}`,
+    arrayBuffer: async () => (await fetch(fullUrl)).arrayBuffer(),
+    blob: async () => (await fetch(fullUrl)).blob() };
+}
+async function androidPick() {
+  if (!(await androidPermission())) { alert('ต้องอนุญาตให้แอปเข้าถึงรูปภาพก่อน ไปที่ ตั้งค่า > แอป > จัดการรูปภาพ > สิทธิ์'); return; }
+  const albums = JSON.parse(AndroidBridge.listAlbums());
+  const total = albums.reduce((s, a) => s + a.count, 0);
+  const opts = `<option value="">ทุกอัลบั้ม (${total.toLocaleString()} รูป)</option>` + albums.map(a => `<option value="${esc(a.id)}">${esc(a.name)} (${a.count.toLocaleString()})</option>`).join('');
+  const ok = await confirmBox('เลือกรูปที่จะสแกน', `<label style="display:block;margin-bottom:10px">อัลบั้ม<br><select id="albSel" class="sel">${opts}</select></label>
+    <label style="display:block">ช่วงเวลา<br><select id="rangeSel" class="sel"><option value="0">ทั้งหมด</option><option value="30">30 วันล่าสุด</option><option value="90">3 เดือนล่าสุด</option><option value="365">1 ปีล่าสุด</option></select></label>
+    <div class="sub" style="margin-top:10px">ถ้ามีรูปเยอะมาก แนะนำให้สแกนทีละอัลบั้มหรือทีละช่วง จะเร็วกว่า</div>` +
+    (AndroidBridge.isPartial() ? '<div class="note" style="margin-top:8px">ตอนนี้แอปเห็นเฉพาะรูปที่คุณเลือกไว้ ถ้าต้องการสแกนทั้งหมดให้อนุญาต "ทั้งหมด" ในตั้งค่าแอป</div>' : ''), false);
+  if (!ok) return;
+  const days = +$('rangeSel').value, since = days ? Date.now() - days*86400000 : 0;
+  const list = JSON.parse(AndroidBridge.listImages($('albSel').value, since));
+  const seen = new Map();
+  await analyze(list.map(m => { const key = (m.path || '') + m.name; const n = (seen.get(key) || 0) + 1; seen.set(key, n);
+    return { name:m.name, path:(m.path || m.album + '/') + m.name + (n > 1 ? ` (${n})` : ''), file:lazyFile(m), parent:null, w:m.w, h:m.h, taken:m.taken }; }));
+}
+async function androidTrash() {
+  if (!drop.size || busy) return;
+  const ids = [...drop], bytes = ids.reduce((s, id) => s + items[id].size, 0);
+  const ok = await confirmBox('ย้ายรูปไปถังขยะ', `จะย้าย <b>${ids.length}</b> รูป (${fmtSize(bytes)}) ไปที่ถังขยะของมือถือ<br><br>มือถือจะถามยืนยันอีกครั้ง รูปในถังขยะกู้คืนได้ภายใน 30 วัน`, false);
+  if (!ok) return;
+  busy = true; lockUI(true); $('moveBtn').disabled = true;
+  const keptOf = new Map();
+  for (const g of groups) { const keep = g.ids.find(id => !drop.has(id)); for (const id of g.ids) keptOf.set(id, keep != null ? items[keep].path : '(ไม่ได้เก็บไว้สักรูป)'); }
+  const t0 = Date.now(), mids = ids.map(id => items[id].file.mediaId);
+  const answered = new Promise(r => { window.onAndroidTrash = r; });
+  setStatus('รอการยืนยันจากมือถือ...', null);
+  if (!AndroidBridge.trash(JSON.stringify(mids))) { busy = false; lockUI(false); updateCounts(); alert('เปิดหน้ายืนยันของมือถือไม่ได้'); return; }
+  const confirmed = await answered;
+  const still = new Set(JSON.parse(AndroidBridge.existing(JSON.stringify(mids))));
+  const log = [], done = new Set();
+  for (const id of ids) { const it = items[id];
+    if (!still.has(it.file.mediaId)) { it.removed = true; done.add(id); log.push({ it, ok:true }); }
+    else log.push({ it, ok:false, err: confirmed ? 'มือถือไม่ยอมย้ายรูปนี้' : 'ยกเลิกในหน้ายืนยันของมือถือ' }); }
+  groups = groups.map(g => ({...g, best:null, ids: g.ids.filter(id => !done.has(id))})).filter(g => g.ids.length > 1);
+  for (const id of done) drop.delete(id);
+  busy = false; lockUI(false);
+  setStatus(`ย้ายไปถังขยะ ${done.size} รูป`, 1);
+  render();
+  if (done.size || confirmed) showResult('trash', log, keptOf, Date.now() - t0);
+}
+$('pickBtn').onclick = async () => {
+  if (busy) return;
+  if (ANDROID) return androidPick();
+  if (!MOBILE) {
+    try { rootHandle = await window.showDirectoryPicker({ id:'photo-dup', mode:'readwrite' }); }
+    catch (e) { if (e.name !== 'AbortError') alert('เปิดโฟลเดอร์ไม่ได้: '+e.message); return; }
+    readOnly = false;
+    $('ffNote').style.display = 'none';
+    $('rescanBtn').disabled = false;
+    await scanFromHandle();
+  } else {
+    readOnly = true;
+    $('fallbackInput').value = '';
+    $('fallbackInput').click();
+  }
+};
+$('rescanBtn').onclick = () => { if (rootHandle && !busy) scanFromHandle(); };
+$('fallbackInput').onchange = async e => {
+  const files = [...e.target.files];
+  const list = [], seen = new Map();
+  for (const f of files) {
+    if (!(f.type.startsWith('image/') || IMG_EXT.includes(ext(f.name)))) continue;
+    // phones sometimes give several photos the same name, so make each path unique
+    const n = (seen.get(f.name) || 0) + 1; seen.set(f.name, n);
+    list.push({ name:f.name, path: n > 1 ? `${f.name} (${n})` : f.name, file:f, parent:null });
+  }
+  setStatus(`กำลังอ่าน ${list.length} รูป...`, 0);
+  await analyze(list);
+};
+
+async function walk(dir, prefix, sub, out) {
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === 'directory') {
+      if (!sub || name === DUP_DIR || name.startsWith('_facebook_') || name.startsWith('$') || name === 'System Volume Information') continue;
+      try { await walk(h, prefix + name + '/', sub, out); } catch (e) { console.warn('ข้ามโฟลเดอร์', name, e); }
+    } else if (IMG_EXT.includes(ext(name))) {
+      out.push({ name, path: prefix + name, handle: h, parent: dir });
+      if (out.length % 200 === 0) setStatus(`กำลังค้นหาไฟล์... พบแล้ว ${out.length} รูป`);
+    }
+  }
+}
+
+async function scanFromHandle() {
+  busy = true; lockUI(true);
+  setStatus('กำลังค้นหาไฟล์...', 0);
+  const list = [];
+  try { await walk(rootHandle, '', $('optSub').checked, list); }
+  catch (e) { alert('อ่านโฟลเดอร์ไม่สำเร็จ: '+e.message); busy=false; lockUI(false); return; }
+  for (const it of list) { try { it.file = await it.handle.getFile(); } catch { it.file = null; } }
+  busy = false;
+  await analyze(list.filter(x => x.file));
+}
+
+function lockUI(on) { $('pickBtn').disabled = on; $('rescanBtn').disabled = on || !rootHandle; }
+
+// ---------- analysis ----------
+async function analyze(list) {
+  busy = true; lockUI(true);
+  for (const it of items) if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url);
+  items = list.map((x, i) => ({ id:i, name:x.name, path:x.path, file:x.file, handle:x.handle||null, parent:x.parent,
+    size:x.file.size, mtime:x.file.lastModified, ext:ext(x.name) || (x.file.type.split('/')[1] || ''), sha:null, ph:null, sharp:null, w:x.w||0, h:x.h||0, taken:x.taken ?? null }));
+  // capture time from EXIF (phones don't keep a useful "modified" date when picking from the album)
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].taken == null && !items[i].file.lazy) { try { items[i].taken = await exifTaken(items[i].file); } catch {} }
+    if (i % 50 === 0) { setStatus(`อ่านวันที่ถ่าย ${i+1}/${items.length}`, 0); await tick(); }
+  }
+  drop = new Set(); groups = []; page = 0; $('result').innerHTML = ''; doneByHand = new Set();
+  $('groups').innerHTML = '';
+  const n = items.length;
+  if (!n) { setStatus('ไม่พบไฟล์รูปในโฟลเดอร์นี้', 0); busy=false; lockUI(false); render(); return; }
+
+  // 1) exact duplicates: hash only files that share a size
+  const bySize = new Map();
+  for (const it of items) { if (!bySize.has(it.size)) bySize.set(it.size, []); bySize.get(it.size).push(it); }
+  const toHash = [...bySize.values()].filter(a => a.length > 1).flat();
+  for (let i = 0; i < toHash.length; i++) {
+    const it = toHash[i];
+    try { it.sha = await sha256(it.file); } catch (e) { console.warn(it.path, e); }
+    if (i % 5 === 0) setStatus(`ตรวจไฟล์ซ้ำเป๊ะ ${i+1}/${toHash.length}`, (i+1)/toHash.length*0.3);
+  }
+
+  // 2) perceptual hash + dimensions
+  if ($('optNear').checked) {
+    const dec = items.filter(it => it.file.lazy || DECODABLE.has(it.ext) || (MOBILE && it.file.type.startsWith('image/') && !/hei[cf]/.test(it.file.type)));
+    const CONC = MOBILE ? 2 : 4; let done = 0, idx = 0;
+    async function worker() {
+      while (idx < dec.length) {
+        const it = dec[idx++];
+        try { await phash(it); } catch (e) { /* cannot decode */ }
+        done++;
+        if (done % 10 === 0 || done === dec.length) setStatus(`วิเคราะห์ภาพ ${done}/${dec.length}`, 0.3 + done/dec.length*0.7);
+      }
+    }
+    await Promise.all(Array.from({length:CONC}, worker));
+  }
+  setStatus(`สแกนเสร็จ พบรูป ${n} ไฟล์`, 1);
+  busy = false; lockUI(false);
+  regroup();
+}
+
+async function sha256(file) {
+  const buf = await file.arrayBuffer();
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// DCT-based perceptual hash (64 bit), stored as two uint32
+const N = 32, DCT = (() => { const c = new Float64Array(N*N);
+  for (let u = 0; u < N; u++) for (let x = 0; x < N; x++) c[u*N+x] = Math.cos((2*x+1)*u*Math.PI/(2*N)); return c; })();
+const cv = document.createElement('canvas'); cv.width = cv.height = N;
+async function phash(it) {
+  // Android: fingerprint the 512 px thumbnail (much faster); real size comes from the gallery
+  const full = await createImageBitmap(it.file.lazy ? await (await fetch(it.file.thumbUrl)).blob() : it.file);
+  if (!it.file.lazy) { it.w = full.width; it.h = full.height; }
+  it.sharp = await sharpness(full);
+  const bmp = await createImageBitmap(full, { resizeWidth:N, resizeHeight:N, resizeQuality:'high' });
+  full.close();
+  const ctx = new OffscreenCanvas(N, N).getContext('2d', { willReadFrequently:true });
+  ctx.drawImage(bmp, 0, 0); bmp.close();
+  const d = ctx.getImageData(0, 0, N, N).data;
+  // coarse colour histogram (4x4x4 bins), used to confirm burst shots share the same scene colours
+  const hist = new Float32Array(64);
+  for (let i = 0; i < N*N; i++) hist[(d[i*4]>>6)*16 + (d[i*4+1]>>6)*4 + (d[i*4+2]>>6)] += 1/(N*N);
+  it.hist = hist;
+  const g = new Float64Array(N*N);
+  for (let i = 0; i < N*N; i++) g[i] = 0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2];
+  // 2D DCT, only the top-left 8x8 needed
+  const tmp = new Float64Array(8*N);
+  for (let u = 0; u < 8; u++) for (let y = 0; y < N; y++) { let s = 0; for (let x = 0; x < N; x++) s += DCT[u*N+x]*g[y*N+x]; tmp[u*N+y] = s; }
+  const co = new Float64Array(64);
+  for (let u = 0; u < 8; u++) for (let v = 0; v < 8; v++) { let s = 0; for (let y = 0; y < N; y++) s += DCT[v*N+y]*tmp[u*N+y]; co[u*8+v] = s; }
+  const sorted = [...co.slice(1)].sort((a,b) => a-b);
+  const med = sorted[31];
+  let a = 0, b = 0;
+  for (let i = 0; i < 64; i++) if (co[i] > med) { if (i < 32) a |= (1 << i); else b |= (1 << (i-32)); }
+  it.ph = [a >>> 0, b >>> 0];
+}
+// Sharpness = variance of the Laplacian on a copy scaled to a fixed size,
+// so photos of different resolutions are compared fairly. Higher = sharper.
+const SH = 320;
+async function sharpness(full) {
+  const sc = SH / Math.max(full.width, full.height);
+  const w = Math.max(8, Math.round(full.width*sc)), h = Math.max(8, Math.round(full.height*sc));
+  const bmp = await createImageBitmap(full, { resizeWidth:w, resizeHeight:h, resizeQuality:'medium' });
+  const ctx = new OffscreenCanvas(w, h).getContext('2d', { willReadFrequently:true });
+  ctx.drawImage(bmp, 0, 0); bmp.close();
+  const d = ctx.getImageData(0, 0, w, h).data, g = new Float32Array(w*h);
+  for (let i = 0; i < w*h; i++) g[i] = 0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2];
+  let sum = 0, sq = 0, n = 0;
+  for (let y = 1; y < h-1; y++) for (let x = 1; x < w-1; x++) {
+    const i = y*w+x, L = g[i-1] + g[i+1] + g[i-w] + g[i+w] - 4*g[i];
+    sum += L; sq += L*L; n++;
+  }
+  const m = sum/n; return Math.round(sq/n - m*m);
+}
+function pop(x) { x -= (x >>> 1) & 0x55555555; x = (x & 0x33333333) + ((x >>> 2) & 0x33333333); return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24; }
+
+function regroup() {
+  const n = items.length, par = Int32Array.from({length:n}, (_, i) => i);
+  const find = x => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
+  const unite = (a, b) => { a = find(a); b = find(b); if (a !== b) par[b] = a; };
+  const bySha = new Map();
+  for (const it of items) if (it.sha && !it.removed) { if (bySha.has(it.sha)) unite(bySha.get(it.sha), it.id); else bySha.set(it.sha, it.id); }
+  if ($('optNear').checked) {
+    const thr = +$('optThr').value;
+    const ph = items.filter(it => it.ph && !it.removed);
+    for (let i = 0; i < ph.length; i++) { const A = ph[i].ph;
+      for (let j = i+1; j < ph.length; j++) { const B = ph[j].ph;
+        if (pop(A[0]^B[0]) + pop(A[1]^B[1]) <= thr) unite(ph[i].id, ph[j].id); } }
+  }
+  // Burst / similar shots: only compare photos that sit close together in the same folder
+  // (file names in sequence), look alike (looser hash), share colours and orientation.
+  const burstEdges = [];
+  if ($('optBurst').checked) {
+    const thr = +$('optBurstThr').value, WIN = 4;
+    const mem = new Map();
+    for (const it of items) if (!it.removed) { const r = find(it.id); if (!mem.has(r)) mem.set(r, []); mem.get(r).push(it); }
+    const members = r => mem.get(r) || [];
+    const byDir = new Map();
+    for (const it of items) if (it.ph && !it.removed) { const dir = it.path.slice(0, it.path.lastIndexOf('/')+1); if (!byDir.has(dir)) byDir.set(dir, []); byDir.get(dir).push(it); }
+    for (const list of byDir.values()) {
+      // order by capture time when every photo has one (phone albums), otherwise by file name
+      const byTime = list.every(it => it.taken);
+      list.sort((a, b) => (byTime ? a.taken - b.taken : 0) || a.name.localeCompare(b.name, undefined, { numeric:true, sensitivity:'base' }));
+      for (let i = 0; i < list.length; i++) for (let j = i+1; j <= i+WIN && j < list.length; j++) {
+        const a = list[i], b = list[j];
+        if (Math.abs(a.w/a.h - b.w/b.h) > 0.03) continue;
+        const dist = pop(a.ph[0]^b.ph[0]) + pop(a.ph[1]^b.ph[1]);
+        if (dist > thr) continue;
+        let inter = 0; for (let k = 0; k < 64; k++) inter += Math.min(a.hist[k], b.hist[k]);
+        if (inter < 0.7) continue;
+        // complete linkage: every photo already in either group must also be close, so one
+        // in-between frame cannot chain two different scenes together
+        const ra = find(a.id), rb = find(b.id);
+        if (ra === rb) continue;
+        const ma = members(ra), mb = members(rb);
+        if (!ma.every(x => mb.every(y => !x.ph || !y.ph || pop(x.ph[0]^y.ph[0]) + pop(x.ph[1]^y.ph[1]) <= thr))) continue;
+        burstEdges.push(a.id);
+        unite(a.id, b.id);
+        mem.set(find(a.id), ma.concat(mb));
+      }
+    }
+  }
+  const burstRoots = new Set(burstEdges.map(find));
+  const m = new Map();
+  for (let i = 0; i < n; i++) { const r = find(i); if (!m.has(r)) m.set(r, []); m.get(r).push(i); }
+  groups = [...m.entries()].filter(([, g]) => g.length > 1).map(([r, ids]) => {
+    const exact = ids.every(id => items[id].sha && items[id].sha === items[ids[0]].sha);
+    return { ids, exact, burst: !exact && burstRoots.has(r) };
+  });
+  groups.sort((a, b) => (b.exact - a.exact) || (a.burst - b.burst) || (b.ids.length - a.ids.length));
+  page = 0;
+  autoSelect();
+}
+
+// Pick which photo to keep in each group, and record why.
+// Order: not blurry -> highest resolution -> largest file -> oldest -> shortest path
+const BLUR_RATIO = 0.6; // a photo whose sharpness is below 60% of the sharpest one counts as blurrier
+function pickBest(g) {
+  const its = g.ids.map(id => items[id]);
+  const maxSharp = Math.max(...its.map(it => it.sharp ?? -1));
+  const okSharp = it => maxSharp <= 0 || it.sharp == null || it.sharp >= maxSharp*BLUR_RATIO;
+  if (g.burst) {
+    // shots of the same moment: the sharpest frame wins, then the larger one
+    const ranked = [...its].sort((a, b) => ((b.sharp ?? -1) - (a.sharp ?? -1)) || (b.w*b.h - a.w*a.h) || (b.size - a.size));
+    const best = ranked[0], second = ranked[1];
+    g.best = best.id;
+    g.reason = best.sharp != null && second.sharp != null
+      ? `เป็นภาพถ่ายต่อเนื่องฉากเดียวกัน รูปนี้คมชัดที่สุดในชุด (คะแนน ${best.sharp.toLocaleString()} รูปถัดไป ${second.sharp.toLocaleString()})`
+      : 'เป็นภาพถ่ายต่อเนื่องฉากเดียวกัน รูปนี้ใหญ่ที่สุดในชุด';
+    return best.id;
+  }
+  const ranked = [...its].sort((a, b) => (okSharp(b) - okSharp(a)) || (b.w*b.h - a.w*a.h) || (b.size - a.size) || ((a.taken ?? a.mtime) - (b.taken ?? b.mtime)) || (a.path.length - b.path.length));
+  const best = ranked[0], others = ranked.slice(1);
+  const why = [];
+  const blurred = others.filter(o => !okSharp(o));
+  if (blurred.length) why.push(blurred.length === others.length
+    ? `คมชัดที่สุด รูปอื่นเบลอกว่า (คะแนนความคมชัด ${best.sharp.toLocaleString()} เทียบกับ ${Math.max(...blurred.map(o => o.sharp)).toLocaleString()})`
+    : `คมชัดกว่า ${blurred.length} รูปที่เบลอ`);
+  const rest = others.filter(o => okSharp(o));
+  if (rest.length) {
+    const px = it => it.w*it.h;
+    if (best.w && rest.every(o => px(o) < px(best))) why.push(`ความละเอียดสูงสุด (${best.w}×${best.h} px)`);
+    else if (best.w && rest.some(o => px(o) < px(best))) why.push(`ความละเอียดสูงสุด (${best.w}×${best.h} px) เท่ากับบางรูป`);
+    const same = rest.filter(o => px(o) === px(best));
+    if (same.length) {
+      if (same.every(o => o.size < best.size)) why.push(`ไฟล์ใหญ่ที่สุด (${fmtSize(best.size)}) จึงน่าจะบีบอัดน้อยที่สุด`);
+      else {
+        const sameSize = same.filter(o => o.size === best.size);
+        if (sameSize.length && sameSize.every(o => (o.taken ?? o.mtime) > (best.taken ?? best.mtime))) why.push('ไฟล์เก่าที่สุด จึงน่าจะเป็นต้นฉบับ');
+        else if (sameSize.length) why.push('ทุกอย่างเท่ากัน จึงเลือกไฟล์ที่อยู่ในโฟลเดอร์ชั้นบนสุด');
+      }
+    }
+  }
+  if (g.exact) why.unshift('ไฟล์เหมือนกันทุกไบต์');
+  if (best.sharp == null && !best.w) why.push('(ไฟล์ชนิดนี้วัดความคมชัดและความละเอียดไม่ได้)');
+  g.best = best.id; g.reason = why.join(' · ');
+  return best.id;
+}
+
+function autoSelect() {
+  drop = new Set();
+  for (const g of groups) { const best = pickBest(g); for (const id of g.ids) if (id !== best) drop.add(id); }
+  render();
+}
+
+// ---------- rendering ----------
+function render() {
+  $('summaryPanel').style.display = items.length ? '' : 'none';
+  $('sTotal').textContent = items.filter(it => !it.removed).length.toLocaleString();
+  $('sGroups').textContent = groups.length.toLocaleString();
+  updateCounts();
+  const box = $('groups'); box.innerHTML = '';
+  if (items.length && !groups.length) { box.innerHTML = `<div class="empty">🎉 ${items.some(it => it.removed) ? 'ไม่มีรูปซ้ำเหลือแล้ว' : 'ไม่พบรูปซ้ำ'}</div>`; return; }
+  const pages = Math.ceil(groups.length / PAGE);
+  if (pages > 1) box.appendChild(pager(pages));
+  groups.slice(page*PAGE, (page+1)*PAGE).forEach((g, gi) => box.appendChild(groupEl(g, page*PAGE + gi + 1)));
+  if (pages > 1) box.appendChild(pager(pages));
+}
+function pager(pages) {
+  const d = document.createElement('div'); d.className = 'pager';
+  const prev = document.createElement('button'); prev.textContent = '‹ ก่อนหน้า'; prev.disabled = page === 0; prev.onclick = () => { page--; render(); scrollTo(0,0); };
+  const next = document.createElement('button'); next.textContent = 'ถัดไป ›'; next.disabled = page >= pages-1; next.onclick = () => { page++; render(); scrollTo(0,0); };
+  const s = document.createElement('span'); s.textContent = `หน้า ${page+1} / ${pages}`;
+  d.append(prev, s, next); return d;
+}
+function groupEl(g, num) {
+  const el = document.createElement('div'); el.className = 'group';
+  const total = g.ids.reduce((s, id) => s + items[id].size, 0);
+  el.innerHTML = `<div class="ghead"><div><b>กลุ่มที่ ${num}</b><span class="badge ${g.exact?'exact':g.burst?'burst':''}">${g.exact?'ไฟล์ซ้ำเป๊ะ':g.burst?'ภาพถ่ายต่อเนื่อง':'รูปคล้ายกัน'}</span>
+    ${g.burst ? '<span class="note" style="margin-left:8px">ท่าทางหรือสีหน้าอาจต่างกัน ดูก่อนเอาออก</span>' : ''}
+    <span class="sub" style="margin-left:8px">${g.ids.length} ไฟล์ · ${fmtSize(total)}</span></div></div>
+    <div class="why"><b>ระบบแนะนำให้เก็บ</b> <span class="wname"></span> <b>เพราะ</b> <span class="wtext"></span></div><div class="items"></div>`;
+  if (g.best == null) pickBest(g);
+  el.querySelector('.wname').textContent = items[g.best].name;
+  el.querySelector('.wtext').textContent = g.reason || '-';
+  const wrap = el.querySelector('.items');
+  for (const id of g.ids) wrap.appendChild(itemEl(items[id], id === g.best));
+  return el;
+}
+function itemEl(it, isBest) {
+  const d = document.createElement('div');
+  const paint = () => { const isDrop = drop.has(it.id); d.className = 'item ' + (isDrop ? 'drop' : 'keep'); d.querySelector('.tag').textContent = isDrop ? '✕ เอาออก' : '✓ เก็บ'; };
+  if (!it.url) it.url = it.file.lazy ? it.file.thumbUrl : URL.createObjectURL(it.file);
+  const dim = it.w ? `${it.w}×${it.h} px` : (DECODABLE.has(it.ext) ? '' : 'แสดงตัวอย่างไม่ได้');
+  d.innerHTML = `<span class="tag"></span><button class="zoom" title="ดูรูปใหญ่">🔍</button>
+    <img class="thumb" loading="lazy" alt="">
+    <div class="meta"><div class="name"></div><div class="path"></div>
+    <div>${fmtSize(it.size)}${dim ? ' · '+dim : ''}</div><div>${it.taken ? '📷 ถ่าย ' + fmtDate(it.taken) : fmtDate(it.mtime)}</div>
+    ${it.sharp != null ? `<div>ความคมชัด: ${it.sharp.toLocaleString()}</div>` : ''}${isBest ? '<div class="rec">★ ระบบแนะนำ</div>' : ''}</div>`;
+  d.querySelector('img').src = it.url;
+  d.querySelector('.name').textContent = it.name;
+  d.querySelector('.path').textContent = it.path;
+  d.onclick = e => {
+    if (e.target.classList.contains('zoom')) { $('viewer').querySelector('img').src = it.file.lazy ? it.file.fullUrl : it.url; $('viewer').classList.add('show'); return; }
+    drop.has(it.id) ? drop.delete(it.id) : drop.add(it.id); paint(); updateCounts();
+  };
+  paint(); return d;
+}
+// ---------- saving files ----------
+// Inside claude.ai the page must ask the host to save; on a phone the share sheet can put photos in the album;
+// otherwise a normal browser download.
+async function hostDownloads() {
+  if (!(window.claude && typeof window.claude.use === 'function')) return null;
+  try { return await window.claude.use('downloads'); } catch { return null; }
+}
+async function saveFile(name, blob) {
+  const dl = await hostDownloads();
+  if (dl) { try { await dl.save({ filename:name, data:blob }); return true; } catch (e) { if (e && e.code === 'declined') return false; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  return true;
+}
+// minimal ZIP (stored, no compression: JPEGs are already compressed)
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+async function makeZip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  for (const f of files) {
+    const data = new Uint8Array(await f.arrayBuffer()), name = enc.encode(f.name), crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+    parts.push(h, name, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    central.push(c, name);
+    off += 30 + name.length + data.length;
+  }
+  const csize = central.reduce((s, x) => s + x.byteLength, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, e], { type:'application/zip' });
+}
+
+// ---------- EXIF capture time (JPEG) ----------
+async function exifTaken(file) {
+  const v = new DataView(await file.slice(0, 256*1024).arrayBuffer());
+  if (v.byteLength < 4 || v.getUint16(0) !== 0xFFD8) return null;
+  let o = 2;
+  while (o + 4 < v.byteLength) {
+    const mk = v.getUint16(o), len = v.getUint16(o+2);
+    if (mk === 0xFFE1 && v.getUint32(o+4) === 0x45786966) {          // "Exif"
+      const t = o + 10, le = v.getUint16(t) === 0x4949;
+      const u16 = x => v.getUint16(t+x, le), u32 = x => v.getUint32(t+x, le);
+      const str = (x, n) => { let r = ''; for (let i = 0; i < n; i++) { const c = v.getUint8(t+x+i); if (!c) break; r += String.fromCharCode(c); } return r; };
+      const readIfd = (ifd, want) => { const n = u16(ifd); for (let i = 0; i < n; i++) { const e = ifd + 2 + i*12; if (u16(e) === want) return e; } return null; };
+      let when = null;
+      const ifd0 = u32(4), exifPtr = readIfd(ifd0, 0x8769);
+      if (exifPtr != null) { const e = readIfd(u32(exifPtr+8), 0x9003); if (e != null) when = str(u32(e+8), 19); }
+      if (!when) { const e = readIfd(ifd0, 0x0132); if (e != null) when = str(u32(e+8), 19); }
+      const m = when && when.match(/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/);
+      return m ? new Date(+m[1], m[2]-1, +m[3], +m[4], +m[5], +m[6]).getTime() : null;
+    }
+    if ((mk & 0xFF00) !== 0xFF00 || mk === 0xFFDA) break;
+    o += 2 + len;
+  }
+  return null;
+}
+
+function updateCounts() {
+  const bytes = [...drop].reduce((s, id) => s + items[id].size, 0);
+  $('sDrop').textContent = drop.size.toLocaleString();
+  $('sSave').textContent = fmtSize(bytes);
+  $('toolbar').classList.toggle('show', groups.length > 0);
+  $('tbInfo').textContent = `เลือกเอาออก ${drop.size} ไฟล์ (${fmtSize(bytes)})`;
+  $('moveBtn').disabled = $('delBtn').disabled = (readOnly && !ANDROID) || drop.size === 0;
+  $('listBtn').disabled = drop.size === 0;
+  $('listBtn').textContent = `🗑 ดูรายการรูปที่ต้องลบเอง (${drop.size})`;
+  $('moveBtn').title = $('delBtn').title = readOnly ? 'ต้องเปิดด้วย Chrome หรือ Edge' : '';
+}
+$('viewer').onclick = () => $('viewer').classList.remove('show');
+
+// ---------- list of photos to delete by hand (mobile) ----------
+const dayFmt = t => new Date(t).toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'long', year:'numeric' });
+const timeFmt = t => new Date(t).toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+let doneByHand = new Set();
+function keptFor(id) { const g = groups.find(g => g.ids.includes(id)); const k = g && g.ids.find(x => !drop.has(x)); return k != null ? items[k] : null; }
+$('listBtn').onclick = () => {
+  const list = [...drop].map(id => items[id]).sort((a, b) => (a.taken ?? a.mtime) - (b.taken ?? b.mtime));
+  const box = $('dlItems'); box.innerHTML = '';
+  let day = null;
+  for (const it of list) {
+    const t = it.taken ?? it.mtime, d = dayFmt(t);
+    if (d !== day) { day = d; const h = document.createElement('div'); h.className = 'dday'; h.textContent = '📅 ' + d + (it.taken ? '' : ' (ไม่มีข้อมูลวันที่ถ่าย)'); box.appendChild(h); }
+    const keep = keptFor(it.id);
+    if (!it.url) it.url = it.file.lazy ? it.file.thumbUrl : URL.createObjectURL(it.file);
+    if (keep && !keep.url) keep.url = keep.file.lazy ? keep.file.thumbUrl : URL.createObjectURL(keep.file);
+    const r = document.createElement('label'); r.className = 'drow' + (doneByHand.has(it.id) ? ' done' : '');
+    r.innerHTML = `<img class="dthumb" alt=""><div class="dinfo"><b></b><br>${it.taken ? '📷 ถ่ายเวลา ' + timeFmt(t) : 'ไม่มีเวลาที่ถ่าย'} · ${fmtSize(it.size)}${it.w ? ' · ' + it.w + '×' + it.h : ''}
+      ${keep ? '<br><span style="color:var(--keep)">เก็บรูปนี้ไว้แทน →</span>' : ''}</div>${keep ? '<img class="dkeep" alt="">' : ''}
+      <span class="dcheck"><input type="checkbox">ลบแล้ว</span>`;
+    r.querySelector('.dthumb').src = it.url;
+    r.querySelector('b').textContent = it.name;
+    if (keep) r.querySelector('.dkeep').src = keep.url;
+    const cb = r.querySelector('input'); cb.checked = doneByHand.has(it.id);
+    cb.onchange = () => { cb.checked ? doneByHand.add(it.id) : doneByHand.delete(it.id); r.classList.toggle('done', cb.checked); dlCount(list); };
+    box.appendChild(r);
+  }
+  dlCount(list);
+  $('delList').classList.add('show');
+};
+function dlCount(list) { const n = list.filter(it => doneByHand.has(it.id)).length;
+  $('dlProgress').textContent = `ลบแล้ว ${n} จาก ${list.length} รูป · พื้นที่ที่จะได้คืนประมาณ ${fmtSize(list.reduce((s, it) => s + it.size, 0))}`; }
+$('dlClose').onclick = () => $('delList').classList.remove('show');
+$('dlShare').onclick = async () => {
+  const list = [...drop].map(id => items[id]).sort((a, b) => (a.taken ?? a.mtime) - (b.taken ?? b.mtime));
+  const text = 'รูปที่ต้องลบ (' + list.length + ' รูป)\n' + list.map((it, i) => `${i+1}. ${it.name} · ${it.taken ? 'ถ่าย ' + dayFmt(it.taken) + ' ' + timeFmt(it.taken) : 'ไม่มีวันที่ถ่าย'} · ${fmtSize(it.size)}`).join('\n');
+  const file = new File([text], 'photos-to-delete.txt', { type:'text/plain' });
+  if (!(await hostDownloads())) {
+    try { if (navigator.canShare && navigator.canShare({ files:[file] })) { await navigator.share({ files:[file], title:'รูปที่ต้องลบ' }); return; } } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  saveFile(file.name, file);
+};
+$('autoBtn').onclick = autoSelect;
+$('keepAllBtn').onclick = () => { drop = new Set(); render(); };
+
+// ---------- CSV ----------
+$('csvBtn').onclick = () => {
+  const rows = [['group','type','action','path','size_bytes','width','height','sharpness','modified','reason_kept']];
+  groups.forEach((g, i) => g.ids.forEach(id => { const it = items[id];
+    rows.push([i+1, g.exact?'exact':g.burst?'burst':'similar', drop.has(id)?'remove':'keep', it.path, it.size, it.w, it.h, it.sharp ?? '', new Date(it.mtime).toISOString(), id === g.best ? g.reason : '']); }));
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  saveFile('duplicate-report.csv', new Blob([csv], {type:'text/csv'}));
+};
+
+// ---------- confirm + actions ----------
+function confirmBox(title, html, needType) {
+  return new Promise(res => {
+    $('cTitle').textContent = title; $('cBody').innerHTML = html;
+    $('cTypeWrap').style.display = needType ? '' : 'none'; $('cType').value = '';
+    $('cOk').className = needType ? 'danger' : 'primary';
+    $('confirm').classList.add('show');
+    const close = v => { $('confirm').classList.remove('show'); $('cOk').onclick = $('cCancel').onclick = null; res(v); };
+    $('cCancel').onclick = () => close(false);
+    $('cOk').onclick = () => { if (needType && $('cType').value.trim() !== 'ลบ') { $('cType').focus(); return; } close(true); };
+  });
+}
+async function ensureWrite() {
+  if ((await rootHandle.queryPermission({mode:'readwrite'})) === 'granted') return true;
+  return (await rootHandle.requestPermission({mode:'readwrite'})) === 'granted';
+}
+async function getDir(base, parts) { let d = base; for (const p of parts) d = await d.getDirectoryHandle(p, {create:true}); return d; }
+
+$('moveBtn').onclick = () => ANDROID ? androidTrash() : runAction('move');
+$('delBtn').onclick = () => runAction('delete');
+
+async function runAction(kind) {
+  if (readOnly || !drop.size || busy) return;
+  const ids = [...drop], bytes = ids.reduce((s, id) => s + items[id].size, 0);
+  const ok = kind === 'move'
+    ? await confirmBox('ย้ายรูปซ้ำ', `จะย้าย <b>${ids.length}</b> ไฟล์ (${fmtSize(bytes)}) ไปไว้ในโฟลเดอร์ <b>${DUP_DIR}</b> ภายในโฟลเดอร์ที่เลือก<br><br>ไฟล์ไม่ได้หายไปไหน ตรวจดูแล้วค่อยลบโฟลเดอร์นั้นเองทีหลังได้`, false)
+    : await confirmBox('ลบรูปถาวร', `จะลบ <b>${ids.length}</b> ไฟล์ (${fmtSize(bytes)}) <b>ถาวร</b><br><span class="note">ไฟล์จะไม่ไปอยู่ในถังขยะ และกู้คืนไม่ได้</span>`, true);
+  if (!ok) return;
+  if (!(await ensureWrite())) { alert('ไม่ได้รับอนุญาตให้แก้ไขไฟล์ในโฟลเดอร์นี้'); return; }
+  busy = true; lockUI(true); $('moveBtn').disabled = $('delBtn').disabled = true;
+  const done = new Set(), fails = [], log = [];
+  // remember, for each file, which photo was kept from its group
+  const keptOf = new Map();
+  for (const g of groups) { const keep = g.ids.find(id => !drop.has(id)); for (const id of g.ids) keptOf.set(id, keep != null ? items[keep].path : '(ไม่ได้เก็บไว้สักรูป)'); }
+  const t0 = Date.now();
+  let dupRoot = null;
+  if (kind === 'move') dupRoot = await rootHandle.getDirectoryHandle(DUP_DIR, {create:true});
+  for (let i = 0; i < ids.length; i++) {
+    const it = items[ids[i]];
+    setStatus(`${kind === 'move' ? 'กำลังย้าย' : 'กำลังลบ'} ${i+1}/${ids.length}: ${it.path}`, (i+1)/ids.length);
+    try {
+      if (kind === 'move') {
+        const parts = it.path.split('/'); parts.pop();
+        const dest = await getDir(dupRoot, parts);
+        let name = it.name;
+        // avoid overwriting something already in _duplicates
+        for (let k = 1; ; k++) { try { await dest.getFileHandle(name); name = it.name.replace(/(\.[^.]+)?$/, m => `_${k}${m}`); } catch { break; } }
+        const fh = await dest.getFileHandle(name, {create:true});
+        const w = await fh.createWritable();
+        await w.write(await it.handle.getFile()); await w.close();
+        const copied = await fh.getFile();
+        if (copied.size !== it.size) throw new Error('คัดลอกไม่ครบ');
+        it.movedTo = [DUP_DIR, ...parts, name].join('/');
+      }
+      await it.parent.removeEntry(it.name);
+      it.removed = true;
+      done.add(it.id);
+      log.push({ it, ok:true });
+    } catch (e) { fails.push(`${it.path}: ${e.message}`); log.push({ it, ok:false, err:e.message }); }
+    if (i % 10 === 0) await tick();
+  }
+  // drop finished items from the view
+  for (const id of done) { const it = items[id]; if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url); it.url = null; }
+  groups = groups.map(g => ({...g, best:null, ids: g.ids.filter(id => !done.has(id))})).filter(g => g.ids.length > 1);
+  for (const id of done) drop.delete(id);
+  busy = false; lockUI(false);
+  setStatus(`${kind === 'move' ? 'ย้าย' : 'ลบ'}สำเร็จ ${done.size} ไฟล์` + (fails.length ? ` · ไม่สำเร็จ ${fails.length} ไฟล์` : ''), 1);
+  render();
+  showResult(kind, log, keptOf, Date.now() - t0);
+}
+
+// ---------- summary after move / delete ----------
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function showResult(kind, log, keptOf, ms) {
+  const ok = log.filter(l => l.ok), bad = log.filter(l => !l.ok);
+  const freed = ok.reduce((s, l) => s + l.it.size, 0);
+  const verb = kind === 'move' ? 'ย้าย' : kind === 'trash' ? 'ย้ายไปถังขยะ' : 'ลบ';
+  const where = kind === 'trash'
+    ? 'รูปอยู่ในถังขยะของมือถือ (Google Photos หรือ Gallery > ถังขยะ) กู้คืนได้ภายใน 30 วัน หลังจากนั้นมือถือจะลบถาวรเอง ถ้าต้องการพื้นที่คืนทันทีให้ไปล้างถังขยะ'
+    : kind === 'move'
+    ? `ไฟล์ทั้งหมดอยู่ในโฟลเดอร์ <b>${esc(rootHandle.name)}\\${DUP_DIR}</b> (เก็บโครงสร้างโฟลเดอร์ย่อยเดิมไว้) ตรวจดูแล้วถ้าไม่ต้องการ ลบโฟลเดอร์ ${DUP_DIR} ทิ้งได้เลย พื้นที่จะว่างจริงหลังลบโฟลเดอร์นั้น`
+    : 'ไฟล์ถูกลบถาวรแล้ว ไม่ได้อยู่ในถังขยะ';
+  const remain = items.filter(it => !it.removed).length;
+  const row = l => `<tr class="${l.ok ? '' : 'fail'}"><td>${l.ok ? '✓' : '✕'}</td><td>${esc(l.it.path)}</td><td>${fmtSize(l.it.size)}</td>
+    <td>${l.ok ? (kind === 'move' ? esc(l.it.movedTo) : kind === 'trash' ? 'อยู่ในถังขยะ' : 'ลบแล้ว') : 'ไม่สำเร็จ: ' + esc(l.err)}</td><td>${esc(keptOf.get(l.it.id) || '')}</td></tr>`;
+  const box = $('result');
+  box.innerHTML = `<div class="panel result">
+    <div class="row"><h2 style="margin:0;font-size:18px">✅ ${kind === 'trash' ? 'สรุปผลการย้ายรูปไปถังขยะ' : 'สรุปผลการ' + verb + 'ไฟล์'}</h2><span class="spacer"></span>
+      <button id="rCsv">⬇ บันทึกรายการเป็น CSV</button><button id="rClose">ปิด</button></div>
+    <div class="summary" style="margin-top:14px">
+      <div class="stat"><b>${ok.length.toLocaleString()}</b><span>${verb}สำเร็จ</span></div>
+      <div class="stat"><b style="color:${bad.length ? 'var(--drop)' : 'inherit'}">${bad.length.toLocaleString()}</b><span>ไม่สำเร็จ</span></div>
+      <div class="stat"><b>${fmtSize(freed)}</b><span>${kind === 'move' ? 'ขนาดไฟล์ที่ย้ายออก' : kind === 'trash' ? 'ได้คืนหลังล้างถังขยะ' : 'พื้นที่ที่ได้คืน'}</span></div>
+      <div class="stat"><b>${remain.toLocaleString()}</b><span>${kind === 'trash' ? 'รูปที่เหลือในรายการที่สแกน' : 'รูปที่เหลือในโฟลเดอร์'}</span></div>
+      <div class="stat"><b>${(ms/1000).toFixed(1)} วิ</b><span>เวลาที่ใช้</span></div>
+    </div>
+    <p style="margin:14px 0 8px">${where}</p>
+    ${bad.length ? `<p class="note">มี ${bad.length} ไฟล์ที่ทำไม่สำเร็จ (ดูแถวสีแดงด้านล่าง) ไฟล์เหล่านี้ยังอยู่ที่เดิม</p>` : ''}
+    <details ${bad.length ? 'open' : ''}><summary>ดูรายการไฟล์ทั้งหมด (${log.length})</summary>
+      <div class="tablewrap"><table><thead><tr><th></th><th>ไฟล์</th><th>ขนาด</th><th>ผลลัพธ์</th><th>รูปที่เก็บไว้แทน</th></tr></thead>
+      <tbody>${log.map(row).join('')}</tbody></table></div></details>
+  </div>`;
+  $('rClose').onclick = () => { box.innerHTML = ''; };
+  if (ANDROID) $('rCsv').style.display = 'none';
+  $('rCsv').onclick = () => {
+    const rows = [['result','file','size_bytes',kind === 'move' ? 'moved_to' : 'action','kept_instead','error']]
+      .concat(log.map(l => [l.ok ? 'ok' : 'failed', l.it.path, l.it.size, l.ok ? (kind === 'move' ? l.it.movedTo : kind === 'trash' ? 'trash' : 'deleted') : '', keptOf.get(l.it.id) || '', l.err || '']));
+    const csv = '\ufeff' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    a.download = `${kind === 'move' ? 'moved' : kind === 'trash' ? 'trashed' : 'deleted'}-files-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  };
+  box.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ================= Facebook resize =================
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
+  $('tabDup').hidden = b.dataset.tab !== 'tabDup'; $('tabFb').hidden = b.dataset.tab !== 'tabFb';
+  document.body.classList.toggle('fb', b.dataset.tab === 'tabFb');
+});
+const FB_DEF = { fbLong:2048, fbAmt:150, fbRad:0.2, fbThr:0, fbQ:92 };
+$('fbReset').onclick = () => { for (const k in FB_DEF) $(k).value = FB_DEF[k]; };
+const DECODE_FB = ['jpg','jpeg','png','webp','bmp','avif','jfif','gif'];
+let fbBusy = false;
+const fbStatus = (t, p) => { $('fbStatus').textContent = t; if (p != null) $('fbBar').style.width = (p*100).toFixed(1)+'%'; };
+function fbOpts() {
+  const n = id => +$(id).value;
+  return { long: Math.max(200, Math.round(n('fbLong')) || 2048), amount: Math.max(0, n('fbAmt'))/100,
+    radius: Math.max(0.1, n('fbRad') || 0.2), threshold: Math.max(0, n('fbThr')), q: Math.min(1, Math.max(0.5, n('fbQ')/100)) };
+}
+function fbLock(on) { fbBusy = on; $('fbPickDir').disabled = $('fbPickFiles').disabled = on; }
+
+$('fbPickDir').onclick = async () => {
+  if (fbBusy) return;
+  if (!window.showDirectoryPicker) { alert('ฟังก์ชันนี้ต้องใช้ Chrome หรือ Edge'); return; }
+  let dir; try { dir = await window.showDirectoryPicker({ id:'photo-fb', mode:'readwrite' }); } catch (e) { return; }
+  fbLock(true); fbStatus('กำลังค้นหารูป...', 0);
+  const list = [];
+  async function walkFb(d, prefix) {
+    for await (const [name, h] of d.entries()) {
+      if (h.kind === 'directory') {
+        if (!$('fbSub').checked || name === DUP_DIR || name.startsWith('_facebook_') || name.startsWith('$')) continue;
+        try { await walkFb(h, prefix + name + '/'); } catch {}
+      } else if (DECODE_FB.includes(ext(name))) list.push({ name, path: prefix + name, handle: h });
+    }
+  }
+  try { await walkFb(dir, ''); } catch (e) { alert('อ่านโฟลเดอร์ไม่สำเร็จ: ' + e.message); fbLock(false); return; }
+  fbLock(false);
+  await fbRun(dir, list);
+};
+$('fbPickFiles').onclick = async () => {
+  if (fbBusy) return;
+  if (MOBILE) { $('fbInput').value = ''; $('fbInput').click(); return; }
+  if (!window.showOpenFilePicker) { alert('ฟังก์ชันนี้ต้องใช้ Chrome หรือ Edge'); return; }
+  let hs; try { hs = await window.showOpenFilePicker({ id:'photo-fb', multiple:true, types:[{ description:'รูปภาพ', accept:{ 'image/*': DECODE_FB.map(e => '.'+e) } }] }); } catch { return; }
+  alert(`เลือกแล้ว ${hs.length} รูป ต่อไปให้เลือกโฟลเดอร์ที่จะบันทึก (ระบบจะสร้างโฟลเดอร์ย่อยใหม่ในนั้นให้)`);
+  let dir; try { dir = await window.showDirectoryPicker({ id:'photo-fb-out', mode:'readwrite' }); } catch { return; }
+  await fbRun(dir, hs.map(h => ({ name: h.name, path: h.name, handle: h })));
+};
+
+$('fbInput').onchange = e => {
+  const files = [...e.target.files].filter(f => f.type.startsWith('image/'));
+  const seen = new Map();
+  fbRun(null, files.map(f => { const n = (seen.get(f.name) || 0) + 1; seen.set(f.name, n);
+    const name = n > 1 ? f.name.replace(/(\.[^.]+)?$/, m => `_${n}${m}`) : f.name; return { name, path:name, file:f }; }));
+};
+
+// baseDir = folder to write into (computer); null = keep the results in memory and offer Save/Share (phone)
+async function fbRun(baseDir, list) {
+  if (!list.length) { fbStatus('ไม่พบไฟล์รูปที่ย่อได้', 0); return; }
+  const o = fbOpts();
+  const outName = `_facebook_${o.long}`;
+  const ok = await confirmBox('ย่อรูปลง Facebook',
+    `จะย่อ <b>${list.length}</b> รูป ให้ด้านยาว <b>${o.long} px</b> แล้วดึงความคม (Amount ${Math.round(o.amount*100)}%, Radius ${o.radius}, Threshold ${o.threshold})<br><br>` +
+    (baseDir ? `รูปใหม่จะบันทึกไว้ที่ <b>${esc(baseDir.name)}\\${outName}</b> เป็น JPEG<br>ต้นฉบับไม่ถูกแก้ไข ถ้ามีไฟล์ชื่อเดียวกันในโฟลเดอร์ ${outName} อยู่แล้วจะถูกเขียนทับ`
+             : 'ย่อเสร็จแล้วจะมีปุ่มให้บันทึกรูปใหม่ลงเครื่อง รูปต้นฉบับในอัลบั้มไม่ถูกแก้ไข'), false);
+  if (!ok) return;
+  if (baseDir && (await baseDir.queryPermission({mode:'readwrite'})) !== 'granted' && (await baseDir.requestPermission({mode:'readwrite'})) !== 'granted') { alert('ไม่ได้รับอนุญาตให้บันทึกไฟล์'); return; }
+  fbLock(true);
+  const t0 = Date.now(), log = [], used = new Set();
+  const outRoot = baseDir ? await baseDir.getDirectoryHandle(outName, { create:true }) : null;
+  const outFiles = [];
+  let preview = null;
+  for (let i = 0; i < list.length; i++) {
+    const x = list[i];
+    fbStatus(`กำลังย่อ ${i+1}/${list.length}: ${x.path}`, i/list.length);
+    try {
+      const file = x.file || await x.handle.getFile();
+      const r = await fbProcess(file, o);
+      const parts = x.path.split('/'); parts.pop();
+      let base = x.name.replace(/\.[^.]+$/, ''), name = base + '.jpg';
+      for (let k = 2; used.has(parts.concat(name).join('/')); k++) name = `${base}_${k}.jpg`;
+      used.add(parts.concat(name).join('/'));
+      if (outRoot) {
+        const dest = await getDir(outRoot, parts);
+        const w = await (await dest.getFileHandle(name, { create:true })).createWritable();
+        await w.write(r.blob); await w.close();
+      } else outFiles.push(new File([r.blob], 'fb_' + name, { type:'image/jpeg' }));
+      log.push({ ok:true, path:x.path, out:[outName, ...parts, name].join('/'), w0:r.w0, h0:r.h0, w:r.w, h:r.h, s0:file.size, s:r.blob.size, sharpened:r.sharpened });
+      if (!preview && r.sharpened) preview = { file, blob:r.blob, w0:r.w0, w:r.w, path:x.path };
+    } catch (e) { log.push({ ok:false, path:x.path, err:e.message }); }
+    await tick();
+  }
+  fbStatus(`เสร็จแล้ว ${log.filter(l => l.ok).length}/${list.length} รูป`, 1);
+  fbLock(false);
+  fbShowResult(baseDir ? baseDir.name + '\\' + outName : null, log, Date.now() - t0, preview, outFiles);
+}
+
+// Resize with the browser's high quality scaler, then Unsharp Mask on RGB.
+async function fbProcess(file, o) {
+  const full = await createImageBitmap(file);
+  const w0 = full.width, h0 = full.height, sc = Math.min(1, o.long / Math.max(w0, h0));
+  const w = Math.max(1, Math.round(w0*sc)), h = Math.max(1, Math.round(h0*sc));
+  const bmp = sc < 1 ? await createImageBitmap(full, { resizeWidth:w, resizeHeight:h, resizeQuality:'high' }) : full;
+  const cvs = new OffscreenCanvas(w, h), ctx = cvs.getContext('2d', { willReadFrequently:true });
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);   // transparent PNG -> white background
+  ctx.drawImage(bmp, 0, 0); if (bmp !== full) bmp.close(); full.close();
+  const sharpened = sc < 1 && o.amount > 0;
+  if (sharpened) { const img = ctx.getImageData(0, 0, w, h); unsharp(img, o.amount, o.radius, o.threshold); ctx.putImageData(img, 0, 0); }
+  const blob = await cvs.convertToBlob({ type:'image/jpeg', quality:o.q });
+  return { blob, w0, h0, w, h, sharpened };
+}
+
+// Gaussian weights integrated over each pixel (so small radii like 0.2 still give a defined kernel)
+function erf(x) { const t = 1/(1+0.3275911*Math.abs(x)), y = 1 - (((((1.061405429*t - 1.453152027)*t) + 1.421413741)*t - 0.284496736)*t + 0.254829592)*t*Math.exp(-x*x); return x >= 0 ? y : -y; }
+function kernel(sigma) {
+  const r = Math.max(1, Math.ceil(sigma*3)), k = [];
+  const cdf = x => 0.5*(1 + erf(x/(sigma*Math.SQRT2)));
+  for (let i = -r; i <= r; i++) k.push(cdf(i+0.5) - cdf(i-0.5));
+  const s = k.reduce((a, b) => a+b, 0); return k.map(v => v/s);
+}
+function unsharp(img, amount, radius, threshold) {
+  const { width:w, height:h, data:d } = img, k = kernel(radius), r = (k.length-1)/2;
+  const n = w*h, src = new Float32Array(n*3), tmp = new Float32Array(n*3), blur = new Float32Array(n*3);
+  for (let i = 0; i < n; i++) { src[i*3] = d[i*4]; src[i*3+1] = d[i*4+1]; src[i*3+2] = d[i*4+2]; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) for (let c = 0; c < 3; c++) {
+    let s = 0; for (let j = -r; j <= r; j++) { const xx = Math.min(w-1, Math.max(0, x+j)); s += k[j+r]*src[(y*w+xx)*3+c]; } tmp[(y*w+x)*3+c] = s; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) for (let c = 0; c < 3; c++) {
+    let s = 0; for (let j = -r; j <= r; j++) { const yy = Math.min(h-1, Math.max(0, y+j)); s += k[j+r]*tmp[(yy*w+x)*3+c]; } blur[(y*w+x)*3+c] = s; }
+  for (let i = 0; i < n; i++) for (let c = 0; c < 3; c++) {
+    const o = src[i*3+c], diff = o - blur[i*3+c];
+    if (Math.abs(diff) * 2 < threshold) continue;   // Photoshop-style threshold
+    d[i*4+c] = Math.max(0, Math.min(255, Math.round(o + amount*diff)));
+  }
+}
+
+function fbShowResult(where, log, ms, preview, outFiles) {
+  const ok = log.filter(l => l.ok), bad = log.filter(l => !l.ok);
+  const s0 = ok.reduce((a, l) => a + l.s0, 0), s1 = ok.reduce((a, l) => a + l.s, 0);
+  const notResized = ok.filter(l => !l.sharpened).length;
+  const box = $('fbResult');
+  box.innerHTML = `<div class="panel result">
+    <div class="row"><h2 style="margin:0;font-size:18px">✅ สรุปผลการย่อรูป</h2><span class="spacer"></span><button id="fbClose">ปิด</button></div>
+    <div class="summary" style="margin-top:14px">
+      <div class="stat"><b>${ok.length.toLocaleString()}</b><span>ย่อสำเร็จ</span></div>
+      <div class="stat"><b style="color:${bad.length ? 'var(--drop)' : 'inherit'}">${bad.length}</b><span>ไม่สำเร็จ</span></div>
+      <div class="stat"><b>${fmtSize(s0)} → ${fmtSize(s1)}</b><span>ขนาดรวม ต้นฉบับ → ใหม่</span></div>
+      <div class="stat"><b>${(ms/1000).toFixed(1)} วิ</b><span>เวลาที่ใช้</span></div>
+    </div>
+    <p style="margin:14px 0 8px">${where ? `รูปใหม่อยู่ในโฟลเดอร์ <b>${esc(where)}</b> พร้อมอัปโหลดลง Facebook ได้เลย`
+      : `กดปุ่มด้านล่างเพื่อบันทึกรูปใหม่ลงเครื่อง${ANDROID ? '' : ' (บน iPhone เลือก "บันทึกรูปภาพ" / Save Images รูปจะเข้าอัลบั้ม Photos)'}<div class="savebtns" id="fbSave"></div>`}
+      ${notResized ? `<br><span class="sub">${notResized} รูปเล็กกว่าขนาดที่ตั้งไว้ จึงไม่ได้ย่อและไม่ได้ดึงความคม แค่บันทึกเป็น JPEG</span>` : ''}</p>
+    ${bad.length ? `<p class="note">มี ${bad.length} รูปที่ทำไม่สำเร็จ (ดูแถวสีแดงด้านล่าง)</p>` : ''}
+    ${preview ? `<details open><summary>เทียบความคมชัด (ขยาย 100% ตรงกลางภาพ: ${esc(preview.path)})</summary>
+      <div class="ba"><figure><figcaption>ย่อแบบธรรมดา ไม่ดึงความคม</figcaption><div class="crop" id="baA"></div></figure>
+      <figure><figcaption>ย่อ + Unsharp Mask (ไฟล์ที่บันทึก)</figcaption><div class="crop" id="baB"></div></figure></div></details>` : ''}
+    <details ${bad.length ? 'open' : ''}><summary>ดูรายการไฟล์ทั้งหมด (${log.length})</summary>
+      <div class="tablewrap"><table><thead><tr><th></th><th>ต้นฉบับ</th><th>ขนาดภาพ</th><th>ขนาดไฟล์</th><th>ไฟล์ใหม่</th></tr></thead><tbody>
+      ${log.map(l => l.ok ? `<tr><td>✓</td><td>${esc(l.path)}</td><td>${l.w0}×${l.h0} → ${l.w}×${l.h}</td><td>${fmtSize(l.s0)} → ${fmtSize(l.s)}</td><td>${esc(l.out)}</td></tr>`
+        : `<tr class="fail"><td>✕</td><td>${esc(l.path)}</td><td colspan="3">ไม่สำเร็จ: ${esc(l.err)}</td></tr>`).join('')}
+      </tbody></table></div></details></div>`;
+  $('fbClose').onclick = () => { box.innerHTML = ''; };
+  if (!where && outFiles.length) fbSaveButtons(outFiles);
+  if (preview) fbPreview(preview);
+  box.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+// Phone: share sheet (Save Images on iPhone) in batches, or plain downloads where sharing files is not possible
+async function fbSaveButtons(files) {
+  const box = $('fbSave'), BATCH = 10;
+  if (ANDROID) {
+    const b = document.createElement('button'); b.className = 'primary';
+    b.textContent = `💾 บันทึก ${files.length} รูปลงอัลบั้ม (Pictures/Facebook)`;
+    b.onclick = async () => { b.disabled = true; let n = 0;
+      for (const f of files) {
+        const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(f); });
+        if (AndroidBridge.saveImage(b64, f.name)) n++;
+        b.textContent = `กำลังบันทึก ${n}/${files.length}...`;
+      }
+      b.textContent = `✓ บันทึกแล้ว ${n}/${files.length} รูป อยู่ในอัลบั้ม Facebook`; b.className = ''; };
+    box.appendChild(b); return;
+  }
+  if (await hostDownloads()) {
+    // inside claude.ai: one ZIP (or the single photo) through the host's save prompt
+    const b = document.createElement('button'); b.className = 'primary';
+    b.textContent = files.length > 1 ? `💾 บันทึก ${files.length} รูป (ไฟล์ ZIP)` : '💾 บันทึกรูป';
+    b.onclick = async () => { b.disabled = true;
+      const blob = files.length > 1 ? await makeZip(files) : files[0];
+      const ok = await saveFile(files.length > 1 ? `facebook-${new Date().toISOString().slice(0,10)}.zip` : files[0].name, blob);
+      b.disabled = false; if (ok) { b.textContent = '✓ ' + b.textContent.replace(/^💾 /, ''); b.className = ''; } };
+    box.appendChild(b);
+    return;
+  }
+  const canShare = navigator.canShare && navigator.canShare({ files:[files[0]] });
+  if (canShare) {
+    for (let i = 0; i < files.length; i += BATCH) {
+      const chunk = files.slice(i, i+BATCH), b = document.createElement('button');
+      b.className = 'primary';
+      b.textContent = files.length > BATCH ? `💾 บันทึกรูปที่ ${i+1}–${i+chunk.length}` : `💾 บันทึก ${chunk.length} รูปลงเครื่อง`;
+      b.onclick = async () => { try { await navigator.share({ files:chunk }); b.textContent = '✓ ' + b.textContent.replace(/^💾 /, ''); b.className = ''; }
+        catch (e) { if (e.name !== 'AbortError') alert('บันทึกไม่สำเร็จ: ' + e.message); } };
+      box.appendChild(b);
+    }
+  } else {
+    const b = document.createElement('button'); b.className = 'primary'; b.textContent = `⬇ ดาวน์โหลด ${files.length} รูป`;
+    b.onclick = async () => { for (const f of files) { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); await new Promise(r => setTimeout(r, 400)); } };
+    box.appendChild(b);
+  }
+}
+async function fbPreview(p) {
+  const o = { ...fbOpts(), amount:0 };
+  const plain = await fbProcess(p.file, o);
+  for (const [id, blob] of [['baA', plain.blob], ['baB', p.blob]]) {
+    const box = $(id); if (!box) return;
+    const img = new Image(); img.src = URL.createObjectURL(blob);
+    await img.decode();
+    img.style.left = (box.clientWidth/2 - img.naturalWidth/2) + 'px';
+    img.style.top = (box.clientHeight/2 - img.naturalHeight/2) + 'px';
+    box.appendChild(img);
+  }
+}
+</script>
+</body>
+</html>
