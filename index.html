@@ -119,6 +119,8 @@ body.fb .toolbar{display:none!important}
   button{padding:10px 12px}
 }
 .sel{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);margin-top:4px}
+.apk{display:inline-block;margin-top:10px;padding:7px 12px;border-radius:8px;background:var(--keep-soft);color:var(--keep);font-weight:600;font-size:14px;text-decoration:none;border:1px solid var(--keep)}
+.apk:hover{filter:brightness(.97)}
 .note{font-size:13px;color:var(--warn)}
 .empty{text-align:center;color:var(--muted);padding:40px}
 .pager{display:flex;gap:8px;justify-content:center;align-items:center;margin:10px 0}
@@ -127,7 +129,8 @@ body.fb .toolbar{display:none!important}
 <body>
 <header>
   <h1>จัดการรูปภาพ</h1>
-  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 8</div>
+  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 9</div>
+  <a class="apk" id="apkLink" href="PhotoTools-android.apk" download="PhotoTools-android.apk">📥 ดาวน์โหลดแอป Android (APK)</a>
   <nav class="tabs"><button class="tab on" data-tab="tabDup">🔍 ค้นหารูปซ้ำ</button><button class="tab" data-tab="tabFb">📐 ย่อรูปลง Facebook</button></nav>
 </header>
 
@@ -305,11 +308,13 @@ if (MOBILE) {
   $('fbPickDir').style.display = 'none';
   $('fbPickFiles').textContent = '📷 เลือกรูปจากอัลบั้ม';
   $('status').textContent = 'ยังไม่ได้เลือกรูป';
-  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 8';
+  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 9';
 }
 const ANDROID = !!window.AndroidBridge;
+// the APK link points at the file next to this page; hide it inside the app and where that file is not beside the page
+if (ANDROID || IN_FRAME) $('apkLink').style.display = 'none';
 if (ANDROID) {
-  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 8';
+  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 9';
   $('ffNote').innerHTML = '📱 กด "เลือกอัลบั้ม" เพื่อสแกนรูปในมือถือ แล้วกด "ย้ายไปถังขยะ" รูปที่เอาออกจะอยู่ในถังขยะของมือถือ <b>กู้คืนได้ 30 วัน</b>';
   $('pickBtn').textContent = '📂 เลือกอัลบั้ม';
   $('listBtn').style.display = 'none';
