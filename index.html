@@ -129,7 +129,7 @@ body.fb .toolbar{display:none!important}
 <body>
 <header>
   <h1>จัดการรูปภาพ</h1>
-  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 9</div>
+  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 11</div>
   <a class="apk" id="apkLink" href="PhotoTools-android.apk" download="PhotoTools-android.apk">📥 ดาวน์โหลดแอป Android (APK)</a>
   <nav class="tabs"><button class="tab on" data-tab="tabDup">🔍 ค้นหารูปซ้ำ</button><button class="tab" data-tab="tabFb">📐 ย่อรูปลง Facebook</button></nav>
 </header>
@@ -287,6 +287,14 @@ showThr();
 $('optThr').oninput = showThr;
 $('optThr').onchange = () => { if (items.length && !busy) regroup(); };
 $('optNear').onchange = () => { if (items.length && !busy) regroup(); };
+// remember the scan options between visits (handy on the phone app, which reloads the page)
+const OPT_KEYS = ['optNear', 'optBurst', 'optThr', 'optBurstThr'];
+try { const o = JSON.parse(localStorage.getItem('scanOpts') || '{}');
+  for (const k of OPT_KEYS) if (k in o) { const el = $(k); if (el.type === 'checkbox') el.checked = o[k]; else el.value = o[k]; } } catch {}
+const saveOpts = () => { try { const o = {}; for (const k of OPT_KEYS) { const el = $(k); o[k] = el.type === 'checkbox' ? el.checked : el.value; } localStorage.setItem('scanOpts', JSON.stringify(o)); } catch {} };
+for (const k of OPT_KEYS) $(k).addEventListener('change', saveOpts);
+$('burstWrap').style.display = $('burstHelp').style.display = $('optBurst').checked ? '' : 'none';
+showThr();
 const showBurst = () => { $('burstVal').textContent = $('optBurstThr').value; $('burstDesc').textContent = descBurst(+$('optBurstThr').value); };
 showBurst();
 $('optBurstThr').oninput = showBurst;
@@ -308,13 +316,13 @@ if (MOBILE) {
   $('fbPickDir').style.display = 'none';
   $('fbPickFiles').textContent = '📷 เลือกรูปจากอัลบั้ม';
   $('status').textContent = 'ยังไม่ได้เลือกรูป';
-  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 9';
+  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 11';
 }
 const ANDROID = !!window.AndroidBridge;
 // the APK link points at the file next to this page; hide it inside the app and where that file is not beside the page
 if (ANDROID || IN_FRAME) $('apkLink').style.display = 'none';
 if (ANDROID) {
-  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 9';
+  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 11';
   $('ffNote').innerHTML = '📱 กด "เลือกอัลบั้ม" เพื่อสแกนรูปในมือถือ แล้วกด "ย้ายไปถังขยะ" รูปที่เอาออกจะอยู่ในถังขยะของมือถือ <b>กู้คืนได้ 30 วัน</b>';
   $('pickBtn').textContent = '📂 เลือกอัลบั้ม';
   $('listBtn').style.display = 'none';
@@ -349,11 +357,68 @@ async function androidPick() {
     (AndroidBridge.isPartial() ? '<div class="note" style="margin-top:8px">ตอนนี้แอปเห็นเฉพาะรูปที่คุณเลือกไว้ ถ้าต้องการสแกนทั้งหมดให้อนุญาต "ทั้งหมด" ในตั้งค่าแอป</div>' : ''), false);
   if (!ok) return;
   const days = +$('rangeSel').value, since = days ? Date.now() - days*86400000 : 0;
-  const list = JSON.parse(AndroidBridge.listImages($('albSel').value, since));
-  const seen = new Map();
-  await analyze(list.map(m => { const key = (m.path || '') + m.name; const n = (seen.get(key) || 0) + 1; seen.set(key, n);
-    return { name:m.name, path:(m.path || m.album + '/') + m.name + (n > 1 ? ` (${n})` : ''), file:lazyFile(m), parent:null, w:m.w, h:m.h, taken:m.taken }; }));
+  // the phone does the analysis in the background, so it keeps going while you use other apps
+  AndroidBridge.startScan($('albSel').value, since);
+  pollScan();
 }
+let scanTimer = null;
+function pollScan() {
+  busy = true; lockUI(true);
+  clearInterval(scanTimer);
+  const tickScan = () => {
+    let st; try { st = JSON.parse(AndroidBridge.scanStatus()); } catch { return; }
+    if (st.state === 'running' || st.state === 'starting') {
+      setStatus(st.total ? `กำลังสแกน ${st.done.toLocaleString()} / ${st.total.toLocaleString()} รูป · สลับไปใช้แอปอื่นได้ การสแกนจะทำต่อเบื้องหลัง` : 'กำลังเตรียมรายการรูป...', st.total ? st.done/st.total : 0);
+      return;
+    }
+    clearInterval(scanTimer); busy = false; lockUI(false);
+    if (st.state === 'done') { loadNative(JSON.parse(AndroidBridge.scanResult())); reportMissedTrash(); }
+    else if (st.state === 'error') { setStatus('สแกนไม่สำเร็จ: ' + (st.error || ''), 0); }
+  };
+  // start the timer first: if the first check already finds the scan finished, it must be able to stop it
+  scanTimer = setInterval(tickScan, 500);
+  tickScan();
+}
+// results computed by the phone: fingerprints are already there, so only grouping is left
+function loadNative(list) {
+  for (const it of items) if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url);
+  const seen = new Map();
+  items = list.map((m, i) => { const key = (m.path || '') + m.name; const n = (seen.get(key) || 0) + 1; seen.set(key, n);
+    return { id:i, name:m.name, path:(m.path || m.album + '/') + m.name + (n > 1 ? ` (${n})` : ''), file:lazyFile(m), handle:null, parent:null,
+      size:m.size, mtime:m.mtime, ext:ext(m.name) || (m.mime.split('/')[1] || ''), sha:m.sha || null,
+      ph: m.ph0 != null ? [m.ph0 >>> 0, m.ph1 >>> 0] : null, sharp: m.sharp ?? null, hist: m.hist ? Float32Array.from(m.hist) : null,
+      w:m.w || 0, h:m.h || 0, taken:m.taken ?? null }; });
+  drop = new Set(); groups = []; page = 0; $('result').innerHTML = ''; doneByHand = new Set();
+  $('groups').innerHTML = '';
+  setStatus(`สแกนเสร็จ พบรูป ${items.length.toLocaleString()} ไฟล์`, 1);
+  if (!items.length) { render(); return; }
+  regroup();
+}
+// If the page was reloaded while the phone's trash dialog was open, the answer came back to no one.
+// The phone kept it, so tell the user here (the scan result already leaves those photos out).
+function reportMissedTrash() {
+  let o = null; try { o = JSON.parse(AndroidBridge.lastTrash() || 'null'); } catch {}
+  if (!o || Date.now() - (o.at || 0) > 3600000) return;   // only a recent answer is worth reporting
+  const listed = items.length > 0;
+  setStatus(o.removed.length ? `ย้ายไปถังขยะแล้ว ${o.removed.length} รูป (จาก ${o.requested} รูปที่เลือก)` + (listed ? ' · รายการด้านล่างอัปเดตแล้ว' : '')
+    : o.confirmed ? 'มือถือไม่ได้ย้ายรูปไปถังขยะ ลองใหม่อีกครั้ง' : 'ไม่ได้ย้ายรูปไปถังขยะ (ยกเลิกในหน้ายืนยันของมือถือ)', 1);
+}
+// the answer arrived after this page had already loaded (it was reloaded while the dialog was open)
+window.androidTrashLate = () => {
+  if (busy) return;
+  let st = null; try { st = JSON.parse(AndroidBridge.scanStatus()); } catch {}
+  if (st && st.state === 'done' && st.hasResult) loadNative(JSON.parse(AndroidBridge.scanResult()));
+  reportMissedTrash();
+};
+// coming back to the app (or the app was reopened): pick up a running or finished scan
+if (ANDROID) {
+  try {
+    const st = JSON.parse(AndroidBridge.scanStatus());
+    if (st.state === 'running' || st.state === 'starting' || (st.state === 'done' && st.hasResult)) setTimeout(pollScan, 0);
+    else setTimeout(reportMissedTrash, 0);
+  } catch {}
+}
+
 async function androidTrash() {
   if (!drop.size || busy) return;
   const ids = [...drop], bytes = ids.reduce((s, id) => s + items[id].size, 0);
@@ -367,6 +432,8 @@ async function androidTrash() {
   setStatus('รอการยืนยันจากมือถือ...', null);
   if (!AndroidBridge.trash(JSON.stringify(mids))) { busy = false; lockUI(false); updateCounts(); alert('เปิดหน้ายืนยันของมือถือไม่ได้'); return; }
   const confirmed = await answered;
+  window.onAndroidTrash = null;
+  AndroidBridge.lastTrash();   // this page got the answer itself: clear the copy kept for a reloaded page
   const still = new Set(JSON.parse(AndroidBridge.existing(JSON.stringify(mids))));
   const log = [], done = new Set();
   for (const id of ids) { const it = items[id];
@@ -762,10 +829,10 @@ function updateCounts() {
   const bytes = [...drop].reduce((s, id) => s + items[id].size, 0);
   $('sDrop').textContent = drop.size.toLocaleString();
   $('sSave').textContent = fmtSize(bytes);
-  $('toolbar').classList.toggle('show', groups.length > 0);
+  $('toolbar').classList.toggle('show', groups.length > 0 || (MOBILE && !ANDROID && doneByHand.size > 0));
   $('tbInfo').textContent = `เลือกเอาออก ${drop.size} ไฟล์ (${fmtSize(bytes)})`;
   $('moveBtn').disabled = $('delBtn').disabled = (readOnly && !ANDROID) || drop.size === 0;
-  $('listBtn').disabled = drop.size === 0;
+  $('listBtn').disabled = drop.size === 0 && doneByHand.size === 0;
   $('listBtn').textContent = `🗑 ดูรายการรูปที่ต้องลบเอง (${drop.size})`;
   $('moveBtn').title = $('delBtn').title = readOnly ? 'ต้องเปิดด้วย Chrome หรือ Edge' : '';
 }
@@ -777,7 +844,8 @@ const timeFmt = t => new Date(t).toLocaleTimeString('th-TH', { hour:'2-digit', m
 let doneByHand = new Set();
 function keptFor(id) { const g = groups.find(g => g.ids.includes(id)); const k = g && g.ids.find(x => !drop.has(x)); return k != null ? items[k] : null; }
 $('listBtn').onclick = () => {
-  const list = [...drop].map(id => items[id]).sort((a, b) => (a.taken ?? a.mtime) - (b.taken ?? b.mtime));
+  // photos to delete, plus ones already ticked as deleted (so a mistaken tick can be undone)
+  const list = [...new Set([...drop, ...doneByHand])].map(id => items[id]).sort((a, b) => (a.taken ?? a.mtime) - (b.taken ?? b.mtime));
   const box = $('dlItems'); box.innerHTML = '';
   let day = null;
   for (const it of list) {
@@ -802,7 +870,24 @@ $('listBtn').onclick = () => {
 };
 function dlCount(list) { const n = list.filter(it => doneByHand.has(it.id)).length;
   $('dlProgress').textContent = `ลบแล้ว ${n} จาก ${list.length} รูป · พื้นที่ที่จะได้คืนประมาณ ${fmtSize(list.reduce((s, it) => s + it.size, 0))}`; }
-$('dlClose').onclick = () => $('delList').classList.remove('show');
+$('dlClose').onclick = () => {
+  $('delList').classList.remove('show');
+  // photos ticked "ลบแล้ว" were deleted by hand in the album: take them out of the counts and groups.
+  // A tick that was taken back brings the photo back.
+  const gone = [...doneByHand].filter(id => !items[id].removed);
+  const back = items.filter(it => it.removed && it.byHand && !doneByHand.has(it.id));
+  if (!gone.length && !back.length) return;
+  for (const id of gone) { items[id].removed = true; items[id].byHand = true; drop.delete(id); }
+  if (back.length) {
+    for (const it of back) { it.removed = false; it.byHand = false; }
+    regroup();   // a returning photo may rejoin a group, so group again
+  } else {
+    const g2 = new Set(gone);
+    groups = groups.map(g => ({...g, best:null, ids: g.ids.filter(id => !g2.has(id))})).filter(g => g.ids.length > 1);
+    render();
+  }
+  setStatus(`ลบแล้ว ${items.filter(it => it.byHand).length} รูป (ที่ติ๊กไว้) · ตัวเลขด้านบนอัปเดตแล้ว`, 1);
+};
 $('dlShare').onclick = async () => {
   const list = [...drop].map(id => items[id]).sort((a, b) => (a.taken ?? a.mtime) - (b.taken ?? b.mtime));
   const text = 'รูปที่ต้องลบ (' + list.length + ' รูป)\n' + list.map((it, i) => `${i+1}. ${it.name} · ${it.taken ? 'ถ่าย ' + dayFmt(it.taken) + ' ' + timeFmt(it.taken) : 'ไม่มีวันที่ถ่าย'} · ${fmtSize(it.size)}`).join('\n');
