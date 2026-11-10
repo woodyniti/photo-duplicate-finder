@@ -248,7 +248,7 @@ body.fb .toolbar{display:none!important}
   <div class="panel">
     <h2 style="margin:0 0 6px;font-size:17px">2. สแกนหารูปที่มีคนนี้</h2>
     <div class="row">
-      <button class="primary" id="faceScanBtn" disabled>📁 เลือกโฟลเดอร์ที่จะค้นหา</button>
+      <button class="primary" id="faceScanBtn">📁 เลือกโฟลเดอร์ที่จะค้นหา</button>
       <label id="faceSubWrap"><input type="checkbox" id="faceSub" checked> รวมโฟลเดอร์ย่อย</label>
       <button id="faceStopBtn" style="display:none">⏹ หยุด</button>
       <label title="ยิ่งค่าต่ำ ยิ่งต้องหน้าเหมือนมาก">ความเข้มงวด:
@@ -1383,7 +1383,7 @@ $('faceThr').oninput = () => { showFaceThr(); faceRender(); };
 function faceLock(on) {
   faceBusy = on;
   $('faceRefBtn').disabled = on;
-  $('faceScanBtn').disabled = on || !faceRefs.some(r => r.on);
+  $('faceScanBtn').disabled = on;
   $('faceCopy').disabled = $('faceCut').disabled = $('faceShare').disabled = on;
 }
 function renderRefs() {
@@ -1398,7 +1398,7 @@ function renderRefs() {
     box.appendChild(d);
   });
   const n = faceRefs.filter(r => r.on).length;
-  $('faceScanBtn').disabled = faceBusy || !n;
+  $('faceScanBtn').disabled = faceBusy;
   if (faceRefs.length) $('faceRefStatus').textContent = n ? `ใช้ ${n} หน้าในการค้นหา` : 'แตะเลือกหน้าของคนที่ต้องการหา';
 }
 $('faceRefBtn').onclick = () => { if (!faceBusy) { $('faceRefInput').value = ''; $('faceRefInput').click(); } };
@@ -1417,10 +1417,12 @@ $('faceRefInput').onchange = async e => {
     if (faces.length > 1) multi = true;
     for (const fc of faces) faceRefs.push({ desc:fc.desc, url:faceCrop(r.c, fc.box, 120), on:faces.length === 1, from:f.name });
   }
+  // nothing chosen yet (every photo had several faces): start with the biggest face of the first photo
+  if (faceRefs.length && !faceRefs.some(r => r.on)) faceRefs[0].on = true;
   if (!$('faceName').value.trim() && files.length === 1) $('faceName').value = files[0].name.replace(/\.[^.]+$/, '').slice(0, 30);
   faceLock(false); renderRefs(); faceRender();
   const msg = [];
-  if (multi) msg.push('มีรูปที่เจอหลายหน้า แตะเลือกหน้าของคนที่ต้องการ (ขอบสีเขียว)');
+  if (multi) msg.push('มีรูปที่เจอหลายหน้า ระบบเลือกหน้าที่ใหญ่ที่สุดให้ก่อน ถ้าไม่ใช่คนที่ต้องการ แตะเปลี่ยนได้ (ขอบสีเขียว = ใช้ค้นหา)');
   if (none.length) msg.push(`ไม่เจอหน้าในรูป ${none.join(', ')} ลองใช้รูปที่เห็นหน้าชัดกว่านี้`);
   if (msg.length) $('faceRefStatus').textContent = msg.join(' · ');
 };
@@ -1435,6 +1437,11 @@ if (ANDROID) $('faceShare').style.display = '';
 $('faceStopBtn').onclick = () => { faceStop = true; $('faceStopBtn').disabled = true; };
 $('faceScanBtn').onclick = async () => {
   if (faceBusy) return;
+  if (!faceRefs.some(r => r.on)) {
+    alert(faceRefs.length ? 'ยังไม่ได้เลือกหน้าที่จะใช้ค้นหา แตะที่รูปหน้าในข้อ 1 ให้มีขอบสีเขียวก่อน'
+      : 'ต้องเลือกรูปหน้าอ้างอิงในข้อ 1 ก่อน (กดปุ่ม "เลือกรูปหน้าอ้างอิง")');
+    $('faceRefBtn').scrollIntoView({ behavior:'smooth', block:'center' }); return;
+  }
   if (ANDROID) return faceAndroidPick();
   if (MOBILE) { $('faceInput').value = ''; $('faceInput').click(); return; }
   let dir; try { dir = await window.showDirectoryPicker({ id:'photo-face', mode:'readwrite' }); }
