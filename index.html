@@ -242,6 +242,12 @@ body.fb .toolbar{display:none!important}
       <span class="sub" id="faceRefStatus"></span>
     </div>
     <div class="refs" id="faceRefs"></div>
+    <div id="faceMissing" class="mobilenote" style="display:none">
+      ⚠️ หาโฟลเดอร์ <b>face</b> ไม่เจอ (ต้องเปิดไฟล์ index.html จากโฟลเดอร์ที่มีโฟลเดอร์ face อยู่ข้าง ๆ เช่น ไฟล์ที่แตก ZIP ออกมา)<br>
+      ถ้ามีโฟลเดอร์ face อยู่ที่อื่น กดปุ่มนี้แล้วเลือกไฟล์ทั้ง 3 ไฟล์ในโฟลเดอร์นั้น (face-api.js, face-models-1.js, face-models-2.js)
+      <div style="margin-top:8px"><button id="faceLibBtn">📂 เลือกไฟล์ในโฟลเดอร์ face</button></div>
+    </div>
+    <input type="file" id="faceLibInput" accept=".js" multiple style="display:none">
     <input type="file" id="faceRefInput" accept="image/*" multiple style="display:none">
   </div>
 
@@ -1087,7 +1093,9 @@ function showResult(kind, log, keptOf, ms) {
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
   for (const t of ['tabDup', 'tabFb', 'tabFace']) $(t).hidden = b.dataset.tab !== t;
-  document.body.classList.toggle('fb', b.dataset.tab !== 'tabDup');   // the duplicate toolbar belongs to the first tab only
+  document.body.classList.toggle('fb', b.dataset.tab !== 'tabDup');
+  // start loading the face recogniser as soon as its tab is opened (shows a notice if its files are missing)
+  if (b.dataset.tab === 'tabFace') setTimeout(() => faceInit().catch(() => {}), 50);   // the duplicate toolbar belongs to the first tab only
 });
 const FB_DEF = { fbLong:2048, fbAmt:150, fbRad:0.2, fbThr:0, fbQ:92 };
 $('fbReset').onclick = () => { for (const k in FB_DEF) $(k).value = FB_DEF[k]; };
@@ -1316,6 +1324,19 @@ const fmtDur = ms => { const s = Math.round(ms/1000); return s < 60 ? `${s} ว�
 const personName = () => ($('faceName').value.trim() || 'person').replace(/[\\/:*?"<>|]/g, '_').replace(/^\.+/, '').slice(0, 60) || 'person';
 const skipDir = name => name === DUP_DIR || name.startsWith('_facebook_') || name.startsWith('_person_') || name.startsWith('$') || name === 'System Volume Information';
 
+// run a script file the user picked (when the face folder is not beside this page)
+function runScriptText(text) { const s = document.createElement('script'); s.textContent = text; document.head.appendChild(s); }
+$('faceLibBtn').onclick = () => { $('faceLibInput').value = ''; $('faceLibInput').click(); };
+$('faceLibInput').onchange = async e => {
+  const files = [...e.target.files], order = ['face-api.js', 'face-models-1.js', 'face-models-2.js'];
+  const need = order.filter(n => !files.some(f => f.name === n));
+  if (need.length) { alert('ยังขาดไฟล์: ' + need.join(', ') + ' เลือกให้ครบทั้ง 3 ไฟล์พร้อมกัน'); return; }
+  $('faceRefStatus').textContent = 'กำลังโหลดไฟล์ตัวจดจำใบหน้า...';
+  for (const n of order) runScriptText(await files.find(f => f.name === n).text());
+  faceReady = null;
+  try { await faceInit(); $('faceMissing').style.display = 'none'; $('faceRefStatus').textContent = 'พร้อมแล้ว เลือกรูปหน้าอ้างอิงได้เลย'; }
+  catch (err) { $('faceRefStatus').textContent = 'โหลดไม่สำเร็จ: ' + err.message; }
+};
 function loadScript(src) {
   return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res;
     s.onerror = () => rej(new Error('ไม่พบไฟล์ ' + src + ' (ต้องมีโฟลเดอร์ face อยู่ข้างไฟล์นี้)')); document.head.appendChild(s); });
@@ -1324,7 +1345,7 @@ function loadScript(src) {
 function faceInit() {
   if (!faceReady) faceReady = (async () => {
     if (!window.faceapi) await loadScript('face/face-api.js');
-    if (!(window.FACE_MODELS && FACE_MODELS.ssd_mobilenetv1_model)) await loadScript('face/face-models-1.js');
+    if (!(window.FACE_MODELS && FACE_MODELS.ssd_mobilenetv1_model && FACE_MODELS.face_landmark_68_model)) await loadScript('face/face-models-1.js');
     if (!(window.FACE_MODELS && FACE_MODELS.face_recognition_model)) await loadScript('face/face-models-2.js');
     const tf = faceapi.tf;
     // WebGL uses the graphics chip; without it the plain CPU version works too, only much slower
@@ -1334,12 +1355,13 @@ function faceInit() {
     faceSlow = !gl;
     const nets = { ssd_mobilenetv1_model: faceapi.nets.ssdMobilenetv1, face_landmark_68_model: faceapi.nets.faceLandmark68Net, face_recognition_model: faceapi.nets.faceRecognitionNet };
     for (const k in nets) {
-      const m = FACE_MODELS[k], bin = atob(m.bin), bytes = new Uint8Array(bin.length);
+      const m = FACE_MODELS[k]; if (!m.bin) continue;   // already loaded
+      const bin = atob(m.bin), bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       nets[k].loadFromWeightMap(tf.io.decodeWeights(bytes.buffer, m.weights));
       m.bin = null;    // the weights now live in the model; free the text copy
     }
-  })().catch(e => { faceReady = null; throw e; });
+  })().catch(e => { faceReady = null; if (/face\//.test(e.message)) $('faceMissing').style.display = ''; throw e; });
   return faceReady;
 }
 async function faceCanvas(file) {
