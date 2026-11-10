@@ -124,14 +124,34 @@ body.fb .toolbar{display:none!important}
 .note{font-size:13px;color:var(--warn)}
 .empty{text-align:center;color:var(--muted);padding:40px}
 .pager{display:flex;gap:8px;justify-content:center;align-items:center;margin:10px 0}
+.fsteps{display:grid;gap:16px}
+.refs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.refface{position:relative;width:88px;text-align:center;font-size:11px;color:var(--muted);cursor:pointer}
+.refface canvas,.refface img{width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--line);display:block;background:#0002}
+.refface.on canvas,.refface.on img{border-color:var(--keep)}
+.refface .x{position:absolute;top:-4px;right:-4px;padding:0 6px;font-size:12px;border-radius:99px;line-height:20px}
+.fitems{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;align-items:start;margin-top:12px}
+.fitem{border:2px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);cursor:pointer}
+.fitem.on{border-color:var(--keep)}
+.fitem.off{opacity:.55}
+.fpic{position:relative;width:100%;background:#0002}
+.fpic img{display:block;width:100%;height:100%;object-fit:cover}
+.fbox{position:absolute;border:2px solid #22c55e;border-radius:4px;box-shadow:0 0 0 1px #0008;pointer-events:none}
+.fitem .meta{padding:6px 8px;font-size:12px;line-height:1.5;word-break:break-all}
+.fitem .chk{position:absolute;top:6px;left:6px;width:22px;height:22px}
+.score{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:6px;background:var(--keep-soft);color:var(--keep)}
+.score.mid{background:#fff4d6;color:#92400e}
+.facebar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 24px;z-index:5;margin:16px -24px -20px}
+.facebar .inner{max-width:1400px;margin:0 auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (max-width:700px){.fitems{grid-template-columns:repeat(2,1fr);gap:8px}.facebar{padding:10px 12px;margin:12px -12px -12px}.facebar button{flex:1}}
 </style>
 </head>
 <body>
 <header>
   <h1>จัดการรูปภาพ</h1>
-  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 11</div>
+  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 12</div>
   <a class="apk" id="apkLink" href="PhotoTools-android.apk" download="PhotoTools-android.apk">📥 ดาวน์โหลดแอป Android (APK)</a>
-  <nav class="tabs"><button class="tab on" data-tab="tabDup">🔍 ค้นหารูปซ้ำ</button><button class="tab" data-tab="tabFb">📐 ย่อรูปลง Facebook</button></nav>
+  <nav class="tabs"><button class="tab on" data-tab="tabDup">🔍 ค้นหารูปซ้ำ</button><button class="tab" data-tab="tabFb">📐 ย่อรูปลง Facebook</button><button class="tab" data-tab="tabFace">👤 หารูปของคนนี้</button></nav>
 </header>
 
 <main id="tabDup">
@@ -210,6 +230,54 @@ body.fb .toolbar{display:none!important}
   </div>
   <input type="file" id="fbInput" accept="image/*" multiple style="display:none">
   <div id="fbResult"></div>
+</main>
+
+<main id="tabFace" hidden>
+  <div class="panel">
+    <h2 style="margin:0 0 6px;font-size:17px">1. เลือกรูปหน้าของคนที่ต้องการหา</h2>
+    <div class="sub">เลือกรูปที่เห็นหน้าชัด ๆ 1–3 รูป (ยิ่งหลายมุมยิ่งแม่น) ถ้าในรูปมีหลายคน ให้แตะเลือกหน้าของคนที่ต้องการ (ขอบสีเขียว = ใช้ค้นหา)</div>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="faceRefBtn">🙂 เลือกรูปหน้าอ้างอิง</button>
+      <label>ชื่อ <input type="text" id="faceName" value="" placeholder="เช่น Aom" class="num" style="width:140px"></label>
+      <span class="sub" id="faceRefStatus"></span>
+    </div>
+    <div class="refs" id="faceRefs"></div>
+    <input type="file" id="faceRefInput" accept="image/*" multiple style="display:none">
+  </div>
+
+  <div class="panel">
+    <h2 style="margin:0 0 6px;font-size:17px">2. สแกนหารูปที่มีคนนี้</h2>
+    <div class="row">
+      <button class="primary" id="faceScanBtn" disabled>📁 เลือกโฟลเดอร์ที่จะค้นหา</button>
+      <label id="faceSubWrap"><input type="checkbox" id="faceSub" checked> รวมโฟลเดอร์ย่อย</label>
+      <button id="faceStopBtn" style="display:none">⏹ หยุด</button>
+      <label title="ยิ่งค่าต่ำ ยิ่งต้องหน้าเหมือนมาก">ความเข้มงวด:
+        <input type="range" id="faceThr" min="35" max="65" value="50"><span id="faceThrVal"></span></label>
+    </div>
+    <div class="help">
+      <b>ความเข้มงวด</b>: บอกว่าหน้าต้องเหมือนรูปอ้างอิงแค่ไหนถึงจะนับว่าเป็นคนเดียวกัน
+      <br>• <b>ค่าต่ำ</b> = เอาเฉพาะรูปที่มั่นใจมาก (คนอื่นไม่ค่อยหลุดเข้ามา แต่อาจพลาดรูปที่หันข้างหรือแสงไม่ดี)
+      <br>• <b>ค่าสูง</b> = เจอรูปมากขึ้น แต่อาจมีคนหน้าคล้าย ๆ เช่น พี่น้อง ติดมาด้วย
+      <br><span class="rec">แนะนำ 45–55</span> · ตอนนี้: <span id="faceThrDesc"></span>
+      <div class="sub" style="margin-top:6px">เลื่อนแถบหรือเพิ่ม/ลดหน้าอ้างอิงแล้วผลจะอัปเดตทันที ไม่ต้องสแกนใหม่ · หน้าที่เล็กมาก ใส่แว่นดำ หรือหันข้างมาก อาจหาไม่เจอ</div>
+    </div>
+    <div class="progress"><div id="faceBar"></div></div>
+    <div id="faceStatus" class="sub" style="margin-top:8px">เลือกหน้าอ้างอิงก่อน แล้วค่อยสแกน</div>
+    <input type="file" id="faceInput" accept="image/*" multiple style="display:none">
+  </div>
+
+  <div id="faceResult"></div>
+  <div id="faceGrid"></div>
+  <div class="facebar" id="faceBarTools" style="display:none">
+    <div class="inner">
+      <span id="faceInfo"></span>
+      <button id="faceAll">เลือกทั้งหมด</button><button id="faceNone">ไม่เลือกเลย</button>
+      <span class="spacer"></span>
+      <button id="faceShare" style="display:none">📤 แชร์</button>
+      <button class="primary" id="faceCopy">📋 Copy (คัดลอก)</button>
+      <button class="danger" id="faceCut">✂️ Cut (ย้าย)</button>
+    </div>
+  </div>
 </main>
 
 <div class="toolbar" id="toolbar">
@@ -316,13 +384,13 @@ if (MOBILE) {
   $('fbPickDir').style.display = 'none';
   $('fbPickFiles').textContent = '📷 เลือกรูปจากอัลบั้ม';
   $('status').textContent = 'ยังไม่ได้เลือกรูป';
-  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 11';
+  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 12';
 }
 const ANDROID = !!window.AndroidBridge;
 // the APK link points at the file next to this page; hide it inside the app and where that file is not beside the page
 if (ANDROID || IN_FRAME) $('apkLink').style.display = 'none';
 if (ANDROID) {
-  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 11';
+  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 12';
   $('ffNote').innerHTML = '📱 กด "เลือกอัลบั้ม" เพื่อสแกนรูปในมือถือ แล้วกด "ย้ายไปถังขยะ" รูปที่เอาออกจะอยู่ในถังขยะของมือถือ <b>กู้คืนได้ 30 วัน</b>';
   $('pickBtn').textContent = '📂 เลือกอัลบั้ม';
   $('listBtn').style.display = 'none';
@@ -347,18 +415,10 @@ function lazyFile(m) {
     blob: async () => (await fetch(fullUrl)).blob() };
 }
 async function androidPick() {
-  if (!(await androidPermission())) { alert('ต้องอนุญาตให้แอปเข้าถึงรูปภาพก่อน ไปที่ ตั้งค่า > แอป > จัดการรูปภาพ > สิทธิ์'); return; }
-  const albums = JSON.parse(AndroidBridge.listAlbums());
-  const total = albums.reduce((s, a) => s + a.count, 0);
-  const opts = `<option value="">ทุกอัลบั้ม (${total.toLocaleString()} รูป)</option>` + albums.map(a => `<option value="${esc(a.id)}">${esc(a.name)} (${a.count.toLocaleString()})</option>`).join('');
-  const ok = await confirmBox('เลือกรูปที่จะสแกน', `<label style="display:block;margin-bottom:10px">อัลบั้ม<br><select id="albSel" class="sel">${opts}</select></label>
-    <label style="display:block">ช่วงเวลา<br><select id="rangeSel" class="sel"><option value="0">ทั้งหมด</option><option value="30">30 วันล่าสุด</option><option value="90">3 เดือนล่าสุด</option><option value="365">1 ปีล่าสุด</option></select></label>
-    <div class="sub" style="margin-top:10px">ถ้ามีรูปเยอะมาก แนะนำให้สแกนทีละอัลบั้มหรือทีละช่วง จะเร็วกว่า</div>` +
-    (AndroidBridge.isPartial() ? '<div class="note" style="margin-top:8px">ตอนนี้แอปเห็นเฉพาะรูปที่คุณเลือกไว้ ถ้าต้องการสแกนทั้งหมดให้อนุญาต "ทั้งหมด" ในตั้งค่าแอป</div>' : ''), false);
-  if (!ok) return;
-  const days = +$('rangeSel').value, since = days ? Date.now() - days*86400000 : 0;
+  const sel = await androidAlbumDialog('เลือกรูปที่จะสแกน', 'ถ้ามีรูปเยอะมาก แนะนำให้สแกนทีละอัลบั้มหรือทีละช่วง จะเร็วกว่า');
+  if (!sel) return;
   // the phone does the analysis in the background, so it keeps going while you use other apps
-  AndroidBridge.startScan($('albSel').value, since);
+  AndroidBridge.startScan(sel.bucket, sel.since);
   pollScan();
 }
 let scanTimer = null;
@@ -479,7 +539,7 @@ $('fallbackInput').onchange = async e => {
 async function walk(dir, prefix, sub, out) {
   for await (const [name, h] of dir.entries()) {
     if (h.kind === 'directory') {
-      if (!sub || name === DUP_DIR || name.startsWith('_facebook_') || name.startsWith('$') || name === 'System Volume Information') continue;
+      if (!sub || skipDir(name)) continue;
       try { await walk(h, prefix + name + '/', sub, out); } catch (e) { console.warn('ข้ามโฟลเดอร์', name, e); }
     } else if (IMG_EXT.includes(ext(name))) {
       out.push({ name, path: prefix + name, handle: h, parent: dir });
@@ -1026,8 +1086,8 @@ function showResult(kind, log, keptOf, ms) {
 // ================= Facebook resize =================
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
-  $('tabDup').hidden = b.dataset.tab !== 'tabDup'; $('tabFb').hidden = b.dataset.tab !== 'tabFb';
-  document.body.classList.toggle('fb', b.dataset.tab === 'tabFb');
+  for (const t of ['tabDup', 'tabFb', 'tabFace']) $(t).hidden = b.dataset.tab !== t;
+  document.body.classList.toggle('fb', b.dataset.tab !== 'tabDup');   // the duplicate toolbar belongs to the first tab only
 });
 const FB_DEF = { fbLong:2048, fbAmt:150, fbRad:0.2, fbThr:0, fbQ:92 };
 $('fbReset').onclick = () => { for (const k in FB_DEF) $(k).value = FB_DEF[k]; };
@@ -1050,7 +1110,7 @@ $('fbPickDir').onclick = async () => {
   async function walkFb(d, prefix) {
     for await (const [name, h] of d.entries()) {
       if (h.kind === 'directory') {
-        if (!$('fbSub').checked || name === DUP_DIR || name.startsWith('_facebook_') || name.startsWith('$')) continue;
+        if (!$('fbSub').checked || skipDir(name)) continue;
         try { await walkFb(h, prefix + name + '/'); } catch {}
       } else if (DECODE_FB.includes(ext(name))) list.push({ name, path: prefix + name, handle: h });
     }
@@ -1186,8 +1246,8 @@ function fbShowResult(where, log, ms, preview, outFiles) {
   box.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 // Phone: share sheet (Save Images on iPhone) in batches, or plain downloads where sharing files is not possible
-async function fbSaveButtons(files) {
-  const box = $('fbSave'), BATCH = 10;
+async function fbSaveButtons(files, box = $('fbSave'), zipBase = 'facebook') {
+  const BATCH = 10;
   if (ANDROID) {
     const b = document.createElement('button'); b.className = 'primary';
     b.textContent = `💾 บันทึก ${files.length} รูปลงอัลบั้ม (Pictures/Facebook)`;
@@ -1206,7 +1266,7 @@ async function fbSaveButtons(files) {
     b.textContent = files.length > 1 ? `💾 บันทึก ${files.length} รูป (ไฟล์ ZIP)` : '💾 บันทึกรูป';
     b.onclick = async () => { b.disabled = true;
       const blob = files.length > 1 ? await makeZip(files) : files[0];
-      const ok = await saveFile(files.length > 1 ? `facebook-${new Date().toISOString().slice(0,10)}.zip` : files[0].name, blob);
+      const ok = await saveFile(files.length > 1 ? `${zipBase}-${new Date().toISOString().slice(0,10)}.zip` : files[0].name, blob);
       b.disabled = false; if (ok) { b.textContent = '✓ ' + b.textContent.replace(/^💾 /, ''); b.className = ''; } };
     box.appendChild(b);
     return;
@@ -1238,6 +1298,407 @@ async function fbPreview(p) {
     img.style.top = (box.clientHeight/2 - img.naturalHeight/2) + 'px';
     box.appendChild(img);
   }
+}
+
+// ================= Find photos of one person (face recognition, runs on this device) =================
+// Faces are found with SSD MobileNet, then each face becomes a 128-number fingerprint (face-api, MIT).
+// Two fingerprints closer than the threshold are treated as the same person. Nothing leaves the device.
+const FACE_MAX = 1024;          // long side the photo is scaled to before looking for faces
+const MIN_FACE = 24;            // smaller faces (in px at that scale) give unreliable fingerprints
+let faceReady = null, faceBusy = false, faceStop = false, faceSlow = false;
+let faceRefs = [];              // {desc, url, on, from}
+let faceItems = [];             // {id,name,path,file,handle,parent,w,h,size,faces:[{box:[x,y,w,h] as 0..1, desc}],gone}
+let faceOff = new Set();        // matches the user un-ticked
+let faceRoot = null;            // folder scanned on the computer
+let faceLimit = 60;
+const faceStatus = (t, p) => { $('faceStatus').textContent = t; if (p != null) $('faceBar').style.width = (p*100).toFixed(1)+'%'; };
+const fmtDur = ms => { const s = Math.round(ms/1000); return s < 60 ? `${s} วินาที` : s < 3600 ? `${Math.round(s/60)} นาที` : `${(s/3600).toFixed(1)} ชั่วโมง`; };
+const personName = () => ($('faceName').value.trim() || 'person').replace(/[\\/:*?"<>|]/g, '_').replace(/^\.+/, '').slice(0, 60) || 'person';
+const skipDir = name => name === DUP_DIR || name.startsWith('_facebook_') || name.startsWith('_person_') || name.startsWith('$') || name === 'System Volume Information';
+
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res;
+    s.onerror = () => rej(new Error('ไม่พบไฟล์ ' + src + ' (ต้องมีโฟลเดอร์ face อยู่ข้างไฟล์นี้)')); document.head.appendChild(s); });
+}
+// load the recogniser only when this tab is used (about 23 MB)
+function faceInit() {
+  if (!faceReady) faceReady = (async () => {
+    if (!window.faceapi) await loadScript('face/face-api.js');
+    if (!(window.FACE_MODELS && FACE_MODELS.ssd_mobilenetv1_model)) await loadScript('face/face-models-1.js');
+    if (!(window.FACE_MODELS && FACE_MODELS.face_recognition_model)) await loadScript('face/face-models-2.js');
+    const tf = faceapi.tf;
+    // WebGL uses the graphics chip; without it the plain CPU version works too, only much slower
+    let gl = false; try { gl = await tf.setBackend('webgl'); } catch {}
+    if (!gl) await tf.setBackend('cpu');
+    await tf.ready();
+    faceSlow = !gl;
+    const nets = { ssd_mobilenetv1_model: faceapi.nets.ssdMobilenetv1, face_landmark_68_model: faceapi.nets.faceLandmark68Net, face_recognition_model: faceapi.nets.faceRecognitionNet };
+    for (const k in nets) {
+      const m = FACE_MODELS[k], bin = atob(m.bin), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      nets[k].loadFromWeightMap(tf.io.decodeWeights(bytes.buffer, m.weights));
+      m.bin = null;    // the weights now live in the model; free the text copy
+    }
+  })().catch(e => { faceReady = null; throw e; });
+  return faceReady;
+}
+async function faceCanvas(file) {
+  const bmp = await createImageBitmap(file.lazy ? await file.blob() : file);
+  const w = bmp.width, h = bmp.height, sc = Math.min(1, FACE_MAX / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w*sc)); c.height = Math.max(1, Math.round(h*sc));
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); bmp.close();
+  return { c, w, h };
+}
+async function faceDetect(c) {
+  const r = await faceapi.detectAllFaces(c, new faceapi.SsdMobilenetv1Options({ minConfidence:0.5, maxResults:50 })).withFaceLandmarks().withFaceDescriptors();
+  return r.filter(d => Math.min(d.detection.box.width, d.detection.box.height) >= MIN_FACE)
+    .map(d => { const b = d.detection.box; return { box:[b.x/c.width, b.y/c.height, b.width/c.width, b.height/c.height], desc:d.descriptor }; });
+}
+function faceCrop(c, box, size) {
+  const [x, y, w, h] = [box[0]*c.width, box[1]*c.height, box[2]*c.width, box[3]*c.height];
+  const s = Math.max(w, h) * 1.5, o = document.createElement('canvas'); o.width = o.height = size;
+  o.getContext('2d').drawImage(c, x + w/2 - s/2, y + h/2 - s/2, s, s, 0, 0, size, size);
+  return o.toDataURL('image/jpeg', 0.85);
+}
+function faceDist(it, refs) {
+  let best = Infinity, bf = null;
+  for (const f of it.faces) for (const r of refs) {
+    let s = 0; for (let i = 0; i < 128; i++) { const t = f.desc[i] - r.desc[i]; s += t*t; }
+    const d = Math.sqrt(s); if (d < best) { best = d; bf = f; }
+  }
+  return { d:best, f:bf };
+}
+function faceMatches() {
+  const thr = +$('faceThr').value / 100, refs = faceRefs.filter(r => r.on), out = [];
+  if (!refs.length) return out;
+  for (const it of faceItems) { if (it.gone || !it.faces.length) continue; const m = faceDist(it, refs); if (m.d <= thr) out.push({ it, d:m.d, f:m.f }); }
+  return out.sort((a, b) => a.d - b.d);
+}
+
+// ----- reference faces -----
+const descFace = v => v <= 42 ? 'เข้มงวดมาก เอาเฉพาะหน้าที่เหมือนมาก ๆ' : v <= 55 ? 'ระดับแนะนำ' : 'หลวม เจอรูปมากขึ้นแต่อาจมีคนอื่นปน';
+const showFaceThr = () => { $('faceThrVal').textContent = $('faceThr').value; $('faceThrDesc').textContent = descFace(+$('faceThr').value); };
+showFaceThr();
+$('faceThr').oninput = () => { showFaceThr(); faceRender(); };
+function faceLock(on) {
+  faceBusy = on;
+  $('faceRefBtn').disabled = on;
+  $('faceScanBtn').disabled = on || !faceRefs.some(r => r.on);
+  $('faceCopy').disabled = $('faceCut').disabled = $('faceShare').disabled = on;
+}
+function renderRefs() {
+  const box = $('faceRefs'); box.innerHTML = '';
+  faceRefs.forEach((r, i) => {
+    const d = document.createElement('div'); d.className = 'refface' + (r.on ? ' on' : '');
+    d.innerHTML = `<img alt=""><button class="x" title="เอาออก">✕</button><div>${r.on ? '✓ ใช้ค้นหา' : 'แตะเพื่อเลือก'}</div>`;
+    d.querySelector('img').src = r.url;
+    d.onclick = e => { if (faceBusy) return;
+      if (e.target.classList.contains('x')) faceRefs.splice(i, 1); else r.on = !r.on;
+      renderRefs(); faceRender(); };
+    box.appendChild(d);
+  });
+  const n = faceRefs.filter(r => r.on).length;
+  $('faceScanBtn').disabled = faceBusy || !n;
+  if (faceRefs.length) $('faceRefStatus').textContent = n ? `ใช้ ${n} หน้าในการค้นหา` : 'แตะเลือกหน้าของคนที่ต้องการหา';
+}
+$('faceRefBtn').onclick = () => { if (!faceBusy) { $('faceRefInput').value = ''; $('faceRefInput').click(); } };
+$('faceRefInput').onchange = async e => {
+  const files = [...e.target.files]; if (!files.length) return;
+  faceLock(true);
+  $('faceRefStatus').textContent = 'กำลังเตรียมตัวจดจำใบหน้า (ครั้งแรกใช้เวลาสักครู่)...';
+  try { await faceInit(); } catch (err) { $('faceRefStatus').textContent = 'โหลดตัวจดจำใบหน้าไม่ได้: ' + err.message; faceLock(false); return; }
+  let none = [], multi = false;
+  for (const f of files) {
+    $('faceRefStatus').textContent = `กำลังหาหน้าในรูป ${f.name}...`;
+    let faces = [], r = null;
+    try { r = await faceCanvas(f); faces = await faceDetect(r.c); } catch {}
+    if (!faces.length) { none.push(f.name); continue; }
+    faces.sort((a, b) => b.box[2]*b.box[3] - a.box[2]*a.box[3]);
+    if (faces.length > 1) multi = true;
+    for (const fc of faces) faceRefs.push({ desc:fc.desc, url:faceCrop(r.c, fc.box, 120), on:faces.length === 1, from:f.name });
+  }
+  if (!$('faceName').value.trim() && files.length === 1) $('faceName').value = files[0].name.replace(/\.[^.]+$/, '').slice(0, 30);
+  faceLock(false); renderRefs(); faceRender();
+  const msg = [];
+  if (multi) msg.push('มีรูปที่เจอหลายหน้า แตะเลือกหน้าของคนที่ต้องการ (ขอบสีเขียว)');
+  if (none.length) msg.push(`ไม่เจอหน้าในรูป ${none.join(', ')} ลองใช้รูปที่เห็นหน้าชัดกว่านี้`);
+  if (msg.length) $('faceRefStatus').textContent = msg.join(' · ');
+};
+
+// ----- choosing where to search -----
+if (MOBILE) {
+  $('faceSubWrap').style.display = 'none';
+  $('faceScanBtn').textContent = ANDROID ? '📂 เลือกอัลบั้มที่จะค้นหา' : '📷 เลือกรูปจากอัลบั้ม';
+  if (!ANDROID) { $('faceCut').style.display = 'none'; $('faceCopy').textContent = '💾 บันทึกสำเนา'; }
+}
+if (ANDROID) $('faceShare').style.display = '';
+$('faceStopBtn').onclick = () => { faceStop = true; $('faceStopBtn').disabled = true; };
+$('faceScanBtn').onclick = async () => {
+  if (faceBusy) return;
+  if (ANDROID) return faceAndroidPick();
+  if (MOBILE) { $('faceInput').value = ''; $('faceInput').click(); return; }
+  let dir; try { dir = await window.showDirectoryPicker({ id:'photo-face', mode:'readwrite' }); }
+  catch (e) { if (e.name !== 'AbortError') alert('เปิดโฟลเดอร์ไม่ได้: ' + e.message); return; }
+  faceRoot = dir;
+  const list = [];
+  faceLock(true); faceStatus('กำลังค้นหาไฟล์...', 0);
+  async function walkFace(d, prefix) {
+    for await (const [name, h] of d.entries()) {
+      if (h.kind === 'directory') { if (!$('faceSub').checked || skipDir(name)) continue; try { await walkFace(h, prefix + name + '/'); } catch {} }
+      else if (DECODABLE.has(ext(name))) { list.push({ name, path: prefix + name, handle:h, parent:d }); if (list.length % 200 === 0) faceStatus(`กำลังค้นหาไฟล์... พบแล้ว ${list.length} รูป`); }
+    }
+  }
+  try { await walkFace(dir, ''); } catch (e) { alert('อ่านโฟลเดอร์ไม่สำเร็จ: ' + e.message); faceLock(false); return; }
+  faceLock(false);
+  await faceScan(list);
+};
+$('faceInput').onchange = e => {
+  const seen = new Map();
+  faceScan([...e.target.files].filter(f => f.type.startsWith('image/')).map(f => { const n = (seen.get(f.name) || 0) + 1; seen.set(f.name, n);
+    return { name: n > 1 ? f.name.replace(/(\.[^.]+)?$/, m => `_${n}${m}`) : f.name, path: n > 1 ? `${f.name} (${n})` : f.name, file:f }; }));
+};
+async function androidAlbumDialog(title, hint) {
+  if (!(await androidPermission())) { alert('ต้องอนุญาตให้แอปเข้าถึงรูปภาพก่อน ไปที่ ตั้งค่า > แอป > จัดการรูปภาพ > สิทธิ์'); return null; }
+  const albums = JSON.parse(AndroidBridge.listAlbums());
+  const total = albums.reduce((s, a) => s + a.count, 0);
+  const opts = `<option value="">ทุกอัลบั้ม (${total.toLocaleString()} รูป)</option>` + albums.map(a => `<option value="${esc(a.id)}">${esc(a.name)} (${a.count.toLocaleString()})</option>`).join('');
+  const ok = await confirmBox(title, `<label style="display:block;margin-bottom:10px">อัลบั้ม<br><select id="albSel" class="sel">${opts}</select></label>
+    <label style="display:block">ช่วงเวลา<br><select id="rangeSel" class="sel"><option value="0">ทั้งหมด</option><option value="30">30 วันล่าสุด</option><option value="90">3 เดือนล่าสุด</option><option value="365">1 ปีล่าสุด</option></select></label>
+    <div class="sub" style="margin-top:10px">${hint}</div>` +
+    (AndroidBridge.isPartial() ? '<div class="note" style="margin-top:8px">ตอนนี้แอปเห็นเฉพาะรูปที่คุณเลือกไว้ ถ้าต้องการสแกนทั้งหมดให้อนุญาต "ทั้งหมด" ในตั้งค่าแอป</div>' : ''), false);
+  if (!ok) return null;
+  const days = +$('rangeSel').value;
+  return { bucket: $('albSel').value, since: days ? Date.now() - days*86400000 : 0 };
+}
+async function faceAndroidPick() {
+  const sel = await androidAlbumDialog('เลือกรูปที่จะค้นหา', 'การค้นหาหน้าใช้เวลาประมาณ 0.2–1 วินาทีต่อรูป ถ้ามีรูปเยอะแนะนำให้ค้นทีละอัลบั้มหรือทีละช่วง และเปิดแอปค้างไว้ระหว่างสแกน');
+  if (!sel) return;
+  const list = JSON.parse(AndroidBridge.listImages(sel.bucket, sel.since))
+    .map(m => ({ name:m.name, path:(m.path || m.album + '/') + m.name, file:lazyFile(m) }));
+  await faceScan(list);
+}
+
+// ----- scanning -----
+async function faceScan(list) {
+  if (!list.length) { faceStatus('ไม่พบไฟล์รูปที่อ่านได้', 0); return; }
+  faceLock(true); faceStop = false;
+  faceStatus('กำลังเตรียมตัวจดจำใบหน้า...', 0);
+  try { await faceInit(); } catch (e) { faceStatus('โหลดตัวจดจำใบหน้าไม่ได้: ' + e.message, 0); faceLock(false); return; }
+  for (const it of faceItems) if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url);
+  faceItems = []; faceOff = new Set(); faceLimit = 60; $('faceResult').innerHTML = '';
+  $('faceStopBtn').style.display = ''; $('faceStopBtn').disabled = false;
+  const t0 = Date.now(); let bad = 0, nFaces = 0, i = 0;
+  for (; i < list.length && !faceStop; i++) {
+    const x = list[i];
+    const left = i >= 5 ? ` · เหลืออีกประมาณ ${fmtDur((Date.now() - t0) / i * (list.length - i))}` : '';
+    faceStatus(`กำลังสแกน ${i+1}/${list.length} รูป${left}${ANDROID ? ' · เปิดแอปค้างไว้ระหว่างสแกน' : ''}${faceSlow ? ' · เครื่องนี้ใช้การ์ดจอช่วยไม่ได้ จึงช้ากว่าปกติ' : ''}`, i / list.length);
+    try {
+      const file = x.file || await x.handle.getFile();
+      const r = await faceCanvas(file);
+      const faces = await faceDetect(r.c);
+      nFaces += faces.length;
+      faceItems.push({ id:faceItems.length, name:x.name, path:x.path, file, handle:x.handle || null, parent:x.parent || null, w:r.w, h:r.h, size:file.size, faces });
+    } catch { bad++; }
+    if (i % 10 === 9) faceRender();
+    await tick();
+  }
+  $('faceStopBtn').style.display = 'none';
+  faceLock(false);
+  const m = faceMatches().length;
+  faceStatus(`${faceStop ? 'หยุดแล้ว · สแกนไป' : 'สแกนเสร็จ'} ${i.toLocaleString()} รูป ใช้เวลา ${fmtDur(Date.now() - t0)} · เจอหน้าทั้งหมด ${nFaces.toLocaleString()} หน้า · พบรูปของคนนี้ ${m.toLocaleString()} รูป` +
+    (bad ? ` · อ่านไม่ได้ ${bad} รูป (เช่น HEIC)` : ''), 1);
+  faceRender();
+}
+
+// ----- results -----
+function faceRender() {
+  const grid = $('faceGrid');
+  if (!faceItems.length) { grid.innerHTML = ''; $('faceBarTools').style.display = 'none'; return; }
+  const ms = faceMatches(), thr = +$('faceThr').value / 100;
+  grid.innerHTML = '';
+  const head = document.createElement('div'); head.className = 'panel';
+  head.innerHTML = ms.length
+    ? `<b>พบรูปที่มีคนนี้ ${ms.length.toLocaleString()} รูป</b> จาก ${faceItems.filter(it => !it.gone).length.toLocaleString()} รูปที่สแกน <span class="sub">· เรียงจากเหมือนมากไปน้อย · กรอบสีเขียวคือหน้าที่ตรงกัน · แตะรูปเพื่อเลือก/ไม่เลือก</span>`
+    : faceItems.some(it => it.gone) ? `<b>ย้ายรูปของคนนี้ออกไปหมดแล้ว</b> <span class="sub">ดูผลด้านบน</span>`
+    : `<b>ยังไม่พบรูปของคนนี้</b> <span class="sub">ลองเพิ่มรูปหน้าอ้างอิงอีกมุม หรือเลื่อนความเข้มงวดให้สูงขึ้น</span>`;
+  grid.appendChild(head);
+  const wrap = document.createElement('div'); wrap.className = 'fitems'; grid.appendChild(wrap);
+  for (const m of ms.slice(0, faceLimit)) wrap.appendChild(faceEl(m, thr));
+  if (ms.length > faceLimit) {
+    const more = document.createElement('div'); more.className = 'pager';
+    more.innerHTML = `<button>แสดงเพิ่ม (เหลืออีก ${(ms.length - faceLimit).toLocaleString()} รูป)</button>`;
+    more.querySelector('button').onclick = () => { faceLimit += 120; faceRender(); };
+    grid.appendChild(more);
+  }
+  $('faceBarTools').style.display = ms.length ? '' : 'none';
+  faceCounts(ms);
+}
+function faceEl(m, thr) {
+  const it = m.it, d = document.createElement('div');
+  if (!it.url) it.url = it.file.lazy ? it.file.thumbUrl : URL.createObjectURL(it.file);
+  const level = m.d <= thr - 0.08 ? ['เหมือนมาก', ''] : ['น่าจะใช่', ' mid'];
+  const [x, y, w, h] = m.f.box;
+  d.innerHTML = `<div class="fpic" style="aspect-ratio:${it.w}/${it.h}"><img loading="lazy" alt="">
+      <div class="fbox" style="left:${x*100}%;top:${y*100}%;width:${w*100}%;height:${h*100}%"></div>
+      <input type="checkbox" class="chk"><button class="zoom" title="ดูรูปใหญ่">🔍</button></div>
+    <div class="meta"><span class="score${level[1]}">${level[0]} · ${Math.round(m.d*100)}</span> <span class="name"></span><div class="path sub"></div></div>`;
+  d.querySelector('img').src = it.url;
+  d.querySelector('.name').textContent = it.name;
+  d.querySelector('.path').textContent = it.path;
+  const paint = () => { const on = !faceOff.has(it.id); d.className = 'fitem ' + (on ? 'on' : 'off'); d.querySelector('.chk').checked = on; };
+  d.onclick = e => {
+    if (e.target.classList.contains('zoom')) { $('viewer').querySelector('img').src = it.file.lazy ? it.file.fullUrl : it.url; $('viewer').classList.add('show'); return; }
+    if (e.target.classList.contains('chk')) e.preventDefault();
+    faceOff.has(it.id) ? faceOff.delete(it.id) : faceOff.add(it.id); paint(); faceCounts();
+  };
+  paint(); return d;
+}
+const faceSelected = (ms = faceMatches()) => ms.filter(m => !faceOff.has(m.it.id)).map(m => m.it);
+function faceCounts(ms = faceMatches()) {
+  const sel = faceSelected(ms);
+  $('faceInfo').textContent = `เลือก ${sel.length.toLocaleString()} จาก ${ms.length.toLocaleString()} รูป (${fmtSize(sel.reduce((s, it) => s + it.size, 0))})`;
+  $('faceCopy').disabled = $('faceCut').disabled = $('faceShare').disabled = faceBusy || !sel.length;
+}
+$('faceAll').onclick = () => { for (const m of faceMatches()) faceOff.delete(m.it.id); faceRender(); };
+$('faceNone').onclick = () => { for (const m of faceMatches()) faceOff.add(m.it.id); faceRender(); };
+$('faceCopy').onclick = () => faceAction('copy');
+$('faceCut').onclick = () => faceAction('cut');
+$('faceShare').onclick = () => {
+  const sel = faceSelected(); if (!sel.length) return;
+  if (!AndroidBridge.shareImages(JSON.stringify(sel.map(it => it.file.mediaId)))) alert('เปิดหน้าแชร์ไม่ได้');
+};
+
+// ----- copy / cut -----
+async function faceAction(kind) {
+  const list = faceSelected(); if (!list.length || faceBusy) return;
+  const name = personName();
+  if (ANDROID) return faceAndroidAction(kind, list, name);
+  if (MOBILE || !faceRoot) return faceSaveMobile(list, name);
+  const verb = kind === 'cut' ? 'ย้าย' : 'คัดลอก';
+  const ok = await confirmBox(`${verb}รูปของ ${name} (${kind === 'cut' ? 'Cut' : 'Copy'})`,
+    `จะ${verb} <b>${list.length}</b> รูป (${fmtSize(list.reduce((s, it) => s + it.size, 0))}) ไปไว้ด้วยกันในโฟลเดอร์ใหม่<br><br>
+    <label style="display:flex;align-items:flex-start;margin-bottom:8px"><input type="radio" name="fdest" value="root" checked> <span>ในโฟลเดอร์ที่สแกน: <b>${esc(faceRoot.name)}\\_person_${esc(name)}</b></span></label>
+    <label style="display:flex;align-items:flex-start"><input type="radio" name="fdest" value="pick"> <span>เลือกโฟลเดอร์ปลายทางเอง (จะสร้างโฟลเดอร์ <b>${esc(name)}</b> ในนั้น)</span></label><br>` +
+    (kind === 'cut' ? 'รูปจะถูก<b>ย้ายออกจากที่เดิม</b> (ไม่ได้ลบ ย้ายกลับเองได้) ระบบตรวจว่าคัดลอกครบก่อนแล้วค่อยเอาต้นฉบับออก' : 'รูปต้นฉบับยังอยู่ที่เดิม') +
+    '<br><span class="sub">ถ้ามีไฟล์ชื่อซ้ำในปลายทาง จะตั้งชื่อใหม่ต่อท้ายด้วย _2, _3 ไม่เขียนทับ</span>', false);
+  if (!ok) return;
+  let base = faceRoot, sub = '_person_' + name;
+  if (document.querySelector('input[name=fdest]:checked').value === 'pick') {
+    try { base = await window.showDirectoryPicker({ id:'photo-face-out', mode:'readwrite' }); } catch { return; }
+    sub = name;
+  }
+  if ((await base.queryPermission({ mode:'readwrite' })) !== 'granted' && (await base.requestPermission({ mode:'readwrite' })) !== 'granted') { alert('ไม่ได้รับอนุญาตให้บันทึกไฟล์'); return; }
+  if (kind === 'cut' && base !== faceRoot && (await faceRoot.queryPermission({ mode:'readwrite' })) !== 'granted' && (await faceRoot.requestPermission({ mode:'readwrite' })) !== 'granted') { alert('ไม่ได้รับอนุญาตให้ย้ายไฟล์ออกจากโฟลเดอร์ที่สแกน'); return; }
+  faceLock(true);
+  const t0 = Date.now(), log = [];
+  let dest;
+  try { dest = await base.getDirectoryHandle(sub, { create:true }); } catch (e) { faceLock(false); alert('สร้างโฟลเดอร์ไม่ได้: ' + e.message); return; }
+  const taken = new Set(); for await (const [n] of dest.entries()) taken.add(n.toLowerCase());
+  for (let i = 0; i < list.length; i++) {
+    const it = list[i];
+    faceStatus(`กำลัง${verb} ${i+1}/${list.length}: ${it.path}`, i / list.length);
+    try {
+      if (it.parent && await it.parent.isSameEntry(dest)) { log.push({ it, ok:true, out:it.name, note:'อยู่ในโฟลเดอร์นี้อยู่แล้ว' }); continue; }
+      const file = await it.handle.getFile();
+      const b = it.name.replace(/\.[^.]+$/, ''), e = it.name.slice(b.length);
+      // the same photo copied earlier (same name and size): do not make a second copy
+      let same = null;
+      if (taken.has(it.name.toLowerCase())) try { const h = await dest.getFileHandle(it.name); if ((await h.getFile()).size === file.size) same = h; } catch {}
+      if (same) {
+        if (kind === 'cut') { await it.parent.removeEntry(it.name); it.gone = true; if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url); }
+        log.push({ it, ok:true, out:it.name, note:'มีอยู่ในปลายทางแล้ว ไม่ได้คัดลอกซ้ำ' }); continue;
+      }
+      let out = it.name; for (let k = 2; taken.has(out.toLowerCase()); k++) out = `${b}_${k}${e}`;
+      const fh = await dest.getFileHandle(out, { create:true });
+      const w = await fh.createWritable(); await w.write(file); await w.close();
+      taken.add(out.toLowerCase());
+      if (kind === 'cut') {
+        if ((await fh.getFile()).size !== file.size) throw new Error('คัดลอกไม่ครบ จึงไม่ได้เอาต้นฉบับออก');
+        await it.parent.removeEntry(it.name);
+        it.gone = true;
+        if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url);
+      }
+      log.push({ it, ok:true, out });
+    } catch (e) { log.push({ it, ok:false, err:e.message }); }
+    if (i % 5 === 4) await tick();
+  }
+  faceLock(false);
+  faceStatus(`${verb}เสร็จ ${log.filter(l => l.ok).length}/${list.length} รูป`, 1);
+  faceShowResult(kind, `${base.name}\\${sub}`, log, Date.now() - t0);
+  faceRender();
+}
+// phone browser: the web cannot write into the album, so offer the photos to save (share sheet / ZIP)
+async function faceSaveMobile(list, name) {
+  const used = new Set(), files = list.map(it => {
+    let n = it.name; const b = n.replace(/\.[^.]+$/, ''), e = n.slice(b.length);
+    for (let k = 2; used.has(n.toLowerCase()); k++) n = `${b}_${k}${e}`; used.add(n.toLowerCase());
+    return new File([it.file], n, { type: it.file.type || 'image/jpeg' }); });
+  const box = $('faceResult');
+  box.innerHTML = `<div class="panel result"><div class="row"><h2 style="margin:0;font-size:18px">💾 บันทึกรูปของ ${esc(name)} (${files.length} รูป)</h2><span class="spacer"></span><button id="frClose">ปิด</button></div>
+    <p style="margin:12px 0 4px">กดปุ่มด้านล่างเพื่อบันทึกสำเนาลงเครื่อง (บน iPhone เลือก "บันทึกรูปภาพ" / Save Images หรือส่งให้เพื่อนทาง LINE ได้เลย)</p>
+    <div class="sub">เว็บย้ายหรือลบรูปในอัลบั้มให้ไม่ได้ ทำได้เฉพาะบันทึกสำเนา ถ้าต้องการย้าย (Cut) ให้ใช้แอป Android หรือทำบนคอมพิวเตอร์</div>
+    <div class="savebtns" id="faceSave"></div></div>`;
+  $('frClose').onclick = () => { box.innerHTML = ''; };
+  await fbSaveButtons(files, $('faceSave'), 'person-' + name);
+  box.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+// Android app: copy into a new album (Pictures/<name>); cut = copy, then the phone moves the originals to its trash
+async function faceAndroidAction(kind, list, name) {
+  const verb = kind === 'cut' ? 'ย้าย' : 'คัดลอก';
+  const ok = await confirmBox(`${verb}รูปของ ${name} (${kind === 'cut' ? 'Cut' : 'Copy'})`,
+    `จะ${verb} <b>${list.length}</b> รูป ไปไว้ในอัลบั้มใหม่ <b>${esc(name)}</b> (Pictures/${esc(name)})<br><br>` +
+    (kind === 'cut' ? 'แอปจะคัดลอกให้ครบก่อน แล้วมือถือจะถามยืนยันเพื่อย้ายรูปเดิมไปถังขยะ (กู้คืนได้ภายใน 30 วัน)' : 'รูปเดิมยังอยู่ที่เดิม'), false);
+  if (!ok) return;
+  faceLock(true);
+  const t0 = Date.now(), log = [];
+  for (let i = 0; i < list.length; i++) {
+    const it = list[i];
+    faceStatus(`กำลังคัดลอก ${i+1}/${list.length}: ${it.name}`, i / list.length);
+    const r = AndroidBridge.copyToAlbum(String(it.file.mediaId), name);
+    log.push(r ? { it, ok:true, out:`Pictures/${name}/${r}` } : { it, ok:false, err:'คัดลอกไม่สำเร็จ' });
+    await tick();
+  }
+  if (kind === 'cut') {
+    const copied = log.filter(l => l.ok), mids = copied.map(l => l.it.file.mediaId);
+    if (mids.length) {
+      faceStatus('รอการยืนยันจากมือถือเพื่อย้ายรูปเดิมไปถังขยะ...', 1);
+      const answered = new Promise(r => { window.onAndroidTrash = r; });
+      let confirmed = false;
+      if (AndroidBridge.trash(JSON.stringify(mids))) { confirmed = await answered; AndroidBridge.lastTrash(); }
+      window.onAndroidTrash = null;
+      const still = new Set(JSON.parse(AndroidBridge.existing(JSON.stringify(mids))));
+      for (const l of copied) {
+        if (still.has(l.it.file.mediaId)) l.stay = true, l.note = 'คัดลอกแล้ว แต่รูปเดิมยังอยู่' + (confirmed ? '' : ' (ยกเลิกในหน้ายืนยันของมือถือ)');
+        else l.it.gone = true;
+      }
+    }
+  }
+  faceLock(false);
+  faceStatus(`${verb}เสร็จ ${log.filter(l => l.ok).length}/${list.length} รูป`, 1);
+  faceShowResult(kind, `อัลบั้ม ${name} (Pictures/${name})`, log, Date.now() - t0);
+  faceRender();
+}
+function faceShowResult(kind, where, log, ms) {
+  const ok = log.filter(l => l.ok), bad = log.filter(l => !l.ok), kept = ok.filter(l => l.stay);
+  const verb = kind === 'cut' ? 'ย้าย' : 'คัดลอก';
+  const box = $('faceResult');
+  box.innerHTML = `<div class="panel result">
+    <div class="row"><h2 style="margin:0;font-size:18px">✅ สรุปผลการ${verb}รูป (${kind === 'cut' ? 'Cut' : 'Copy'})</h2><span class="spacer"></span><button id="frClose">ปิด</button></div>
+    <div class="summary" style="margin-top:14px">
+      <div class="stat"><b>${ok.length.toLocaleString()}</b><span>${verb}สำเร็จ</span></div>
+      <div class="stat"><b style="color:${bad.length ? 'var(--drop)' : 'inherit'}">${bad.length}</b><span>ไม่สำเร็จ</span></div>
+      <div class="stat"><b>${fmtSize(ok.reduce((s, l) => s + l.it.size, 0))}</b><span>ขนาดรวม</span></div>
+      <div class="stat"><b>${(ms/1000).toFixed(1)} วิ</b><span>เวลาที่ใช้</span></div>
+    </div>
+    <p style="margin:14px 0 8px">รูปอยู่ที่ <b>${esc(where)}</b>${kind === 'cut' ? (ANDROID ? ' · รูปเดิมอยู่ในถังขยะของมือถือ กู้คืนได้ภายใน 30 วัน' : ' · รูปเดิมถูกย้ายออกจากที่เดิมแล้ว') : ' · รูปต้นฉบับยังอยู่ที่เดิม'}</p>
+    ${kept.length ? `<p class="note">${kept.length} รูปคัดลอกแล้ว แต่รูปเดิมยังไม่ถูกย้าย</p>` : ''}
+    ${bad.length ? `<p class="note">มี ${bad.length} รูปที่ทำไม่สำเร็จ (ดูแถวสีแดงด้านล่าง) รูปเหล่านี้ยังอยู่ที่เดิม</p>` : ''}
+    <details ${bad.length ? 'open' : ''}><summary>ดูรายการไฟล์ทั้งหมด (${log.length})</summary>
+      <div class="tablewrap"><table><thead><tr><th></th><th>ต้นฉบับ</th><th>ขนาด</th><th>ผลลัพธ์</th></tr></thead><tbody>
+      ${log.map(l => `<tr class="${l.ok ? '' : 'fail'}"><td>${l.ok ? '✓' : '✕'}</td><td>${esc(l.it.path)}</td><td>${fmtSize(l.it.size)}</td><td>${l.ok ? esc(l.out) + (l.note ? ' · ' + esc(l.note) : '') : 'ไม่สำเร็จ: ' + esc(l.err)}</td></tr>`).join('')}
+      </tbody></table></div></details></div>`;
+  $('frClose').onclick = () => { box.innerHTML = ''; };
+  box.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 </script>
 </body>
