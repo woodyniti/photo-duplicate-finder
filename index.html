@@ -149,7 +149,7 @@ body.fb .toolbar{display:none!important}
 <body>
 <header>
   <h1>จัดการรูปภาพ</h1>
-  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 12</div>
+  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 13</div>
   <a class="apk" id="apkLink" href="PhotoTools-android.apk" download="PhotoTools-android.apk">📥 ดาวน์โหลดแอป Android (APK)</a>
   <nav class="tabs"><button class="tab on" data-tab="tabDup">🔍 ค้นหารูปซ้ำ</button><button class="tab" data-tab="tabFb">📐 ย่อรูปลง Facebook</button><button class="tab" data-tab="tabFace">👤 หารูปของคนนี้</button></nav>
 </header>
@@ -334,6 +334,8 @@ body.fb .toolbar{display:none!important}
 
 <script>
 "use strict";
+window.addEventListener('error', e => { try { const st = document.getElementById('status'); if (st) st.textContent = 'เกิดข้อผิดพลาด: ' + (e.message || e.error); } catch {} });
+window.addEventListener('unhandledrejection', e => { try { const st = document.getElementById('status'); if (st) st.textContent = 'เกิดข้อผิดพลาด: ' + ((e.reason && e.reason.message) || e.reason); busy = false; lockUI(false); } catch {} });
 const IMG_EXT = ['jpg','jpeg','png','gif','webp','bmp','avif','tif','tiff','heic','heif','jfif'];
 const DECODABLE = new Set(['jpg','jpeg','png','gif','webp','bmp','avif','jfif']);
 const DUP_DIR = '_duplicates';
@@ -390,13 +392,13 @@ if (MOBILE) {
   $('fbPickDir').style.display = 'none';
   $('fbPickFiles').textContent = '📷 เลือกรูปจากอัลบั้ม';
   $('status').textContent = 'ยังไม่ได้เลือกรูป';
-  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 12';
+  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 13';
 }
 const ANDROID = !!window.AndroidBridge;
 // the APK link points at the file next to this page; hide it inside the app and where that file is not beside the page
 if (ANDROID || IN_FRAME) $('apkLink').style.display = 'none';
 if (ANDROID) {
-  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 12';
+  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 13';
   $('ffNote').innerHTML = '📱 กด "เลือกอัลบั้ม" เพื่อสแกนรูปในมือถือ แล้วกด "ย้ายไปถังขยะ" รูปที่เอาออกจะอยู่ในถังขยะของมือถือ <b>กู้คืนได้ 30 วัน</b>';
   $('pickBtn').textContent = '📂 เลือกอัลบั้ม';
   $('listBtn').style.display = 'none';
@@ -516,8 +518,16 @@ $('pickBtn').onclick = async () => {
   if (busy) return;
   if (ANDROID) return androidPick();
   if (!MOBILE) {
-    try { rootHandle = await window.showDirectoryPicker({ id:'photo-dup', mode:'readwrite' }); }
-    catch (e) { if (e.name !== 'AbortError') alert('เปิดโฟลเดอร์ไม่ได้: '+e.message); return; }
+    setStatus('กำลังเปิดโฟลเดอร์... ถ้าเบราว์เซอร์ถามสิทธิ์ ให้กด "อนุญาต / ดูไฟล์" และ "บันทึกการเปลี่ยนแปลง"', 0);
+    let mode = 'readwrite';
+    try { rootHandle = await window.showDirectoryPicker({ id:'photo-dup', mode }); }
+    catch (e) {
+      // the folder was picked but "allow edit" was refused, or Chrome blocked a system folder: try again read-only
+      if (e.name === 'AbortError' || e.name === 'NotAllowedError' || e.name === 'SecurityError') {
+        setStatus('ยังไม่ได้เลือกโฟลเดอร์ (ยกเลิก, ไม่ได้กดอนุญาต หรือเลือกทั้งไดรฟ์ เช่น D:\\ หรือโฟลเดอร์ระบบ ซึ่ง Chrome ไม่ให้เปิด) ลองเลือกโฟลเดอร์ย่อยที่เก็บรูปอีกครั้ง', 0);
+      } else { setStatus('เปิดโฟลเดอร์ไม่ได้: ' + e.message, 0); alert('เปิดโฟลเดอร์ไม่ได้: '+e.message); }
+      return;
+    }
     readOnly = false;
     $('ffNote').style.display = 'none';
     $('rescanBtn').disabled = false;
@@ -560,8 +570,13 @@ async function scanFromHandle() {
   const list = [];
   try { await walk(rootHandle, '', $('optSub').checked, list); }
   catch (e) { alert('อ่านโฟลเดอร์ไม่สำเร็จ: '+e.message); busy=false; lockUI(false); return; }
-  for (const it of list) { try { it.file = await it.handle.getFile(); } catch { it.file = null; } }
+  let failed = 0;
+  for (let i = 0; i < list.length; i++) { const it = list[i];
+    try { it.file = await it.handle.getFile(); } catch (e) { it.file = null; failed++; console.warn('อ่านไฟล์ไม่ได้', it.path, e); }
+    if (i % 100 === 0) setStatus(`กำลังเปิดไฟล์ ${i+1}/${list.length}`, 0); }
   busy = false;
+  if (list.length && failed === list.length) { setStatus(`พบรูป ${list.length} ไฟล์ แต่เปิดไม่ได้เลย (ไฟล์อาจอยู่บน OneDrive/Google Drive แบบยังไม่ได้ดาวน์โหลดลงเครื่อง)`, 0); lockUI(false); return; }
+  if (!list.length) { setStatus($('optSub').checked ? 'ไม่พบไฟล์รูปในโฟลเดอร์นี้ (รองรับ jpg, png, gif, webp, heic ฯลฯ)' : 'ไม่พบไฟล์รูปในโฟลเดอร์นี้ ลองติ๊ก "รวมโฟลเดอร์ย่อย" แล้วกดสแกนใหม่', 0); lockUI(false); render(); return; }
   await analyze(list.filter(x => x.file));
 }
 
@@ -785,7 +800,7 @@ function render() {
   $('sGroups').textContent = groups.length.toLocaleString();
   updateCounts();
   const box = $('groups'); box.innerHTML = '';
-  if (items.length && !groups.length) { box.innerHTML = `<div class="empty">🎉 ${items.some(it => it.removed) ? 'ไม่มีรูปซ้ำเหลือแล้ว' : 'ไม่พบรูปซ้ำ'}</div>`; return; }
+  if (items.length && !groups.length) { box.innerHTML = `<div class="empty">🎉 ${items.some(it => it.removed) ? 'ไม่มีรูปซ้ำเหลือแล้ว' : `ไม่พบรูปซ้ำ (สแกนแล้ว ${items.length.toLocaleString()} รูป แอปนี้แสดงเฉพาะรูปที่ซ้ำกัน)`}</div>`; return; }
   const pages = Math.ceil(groups.length / PAGE);
   if (pages > 1) box.appendChild(pager(pages));
   groups.slice(page*PAGE, (page+1)*PAGE).forEach((g, gi) => box.appendChild(groupEl(g, page*PAGE + gi + 1)));
