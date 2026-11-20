@@ -141,6 +141,18 @@ body.fb .toolbar{display:none!important}
 .fitem .chk{position:absolute;top:6px;left:6px;width:22px;height:22px}
 .score{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:6px;background:var(--keep-soft);color:var(--keep)}
 .score.mid{background:#fff4d6;color:#92400e}
+.score.rest{background:var(--line);color:var(--muted)}
+.person{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px;background:var(--bg)}
+.person .rank{display:inline-block;min-width:64px;padding:2px 8px;border-radius:6px;background:var(--accent-soft);color:var(--accent);text-align:center}
+.person .refs{margin-top:8px}
+.person .refs:empty{display:none}
+.fgroup{grid-column:1/-1;font-weight:600;font-size:14px;padding:8px 2px 0;border-bottom:1px solid var(--line)}
+.fgroup .sub{font-weight:400}
+.fbox.near{border-style:dashed;border-color:#f59e0b}
+.fbox.near b{background:#f59e0b}
+.fassign{width:100%;margin-top:4px;font-size:12px;padding:3px 4px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text)}
+.score.manual{background:var(--accent-soft);color:var(--accent)}
+.fbox b{position:absolute;top:-2px;left:-2px;transform:translateY(-100%);background:#22c55e;color:#fff;font-size:11px;line-height:16px;padding:0 5px;border-radius:4px 4px 0 0;white-space:nowrap}
 .facebar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 24px;z-index:5;margin:16px -24px -20px}
 .facebar .inner{max-width:1400px;margin:0 auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 @media (max-width:700px){.fitems{grid-template-columns:repeat(2,1fr);gap:8px}.facebar{padding:10px 12px;margin:12px -12px -12px}.facebar button{flex:1}}
@@ -149,7 +161,7 @@ body.fb .toolbar{display:none!important}
 <body>
 <header>
   <h1>จัดการรูปภาพ</h1>
-  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 13</div>
+  <div class="sub" id="hdrSub">ทำงานในเครื่องของคุณ 100% ไม่มีการอัปโหลดรูปไปที่ไหน ใช้กับ Chrome หรือ Edge · เวอร์ชัน 16</div>
   <a class="apk" id="apkLink" href="PhotoTools-android.apk" download="PhotoTools-android.apk">📥 ดาวน์โหลดแอป Android (APK)</a>
   <nav class="tabs"><button class="tab on" data-tab="tabDup">🔍 ค้นหารูปซ้ำ</button><button class="tab" data-tab="tabFb">📐 ย่อรูปลง Facebook</button><button class="tab" data-tab="tabFace">👤 หารูปของคนนี้</button></nav>
 </header>
@@ -234,14 +246,14 @@ body.fb .toolbar{display:none!important}
 
 <main id="tabFace" hidden>
   <div class="panel">
-    <h2 style="margin:0 0 6px;font-size:17px">1. เลือกรูปหน้าของคนที่ต้องการหา</h2>
-    <div class="sub">เลือกรูปที่เห็นหน้าชัด ๆ 1–3 รูป (ยิ่งหลายมุมยิ่งแม่น) ถ้าในรูปมีหลายคน ให้แตะเลือกหน้าของคนที่ต้องการ (ขอบสีเขียว = ใช้ค้นหา)</div>
+    <h2 style="margin:0 0 6px;font-size:17px">1. เลือกรูปหน้าของคนที่ต้องการหา (หาได้หลายคน เรียงตามความสำคัญ)</h2>
+    <div class="sub">แต่ละคนเลือกรูปที่เห็นหน้าชัด ๆ 1–3 รูป (ยิ่งหลายมุมยิ่งแม่น) ถ้าในรูปมีหลายคน ให้แตะเลือกหน้าของคนที่ต้องการ (ขอบสีเขียว = ใช้ค้นหา)
+      <br>ถ้าใส่หลายคน รูปจะเรียงตามลำดับ: รูปที่มี<b>คนที่ 1</b> ขึ้นก่อน (รูปเดี่ยวก่อน แล้วตามด้วยรูปที่อยู่กับคนอื่น) → <b>คนที่ 2</b> → <b>คนที่ 3</b> → ... → รูปที่เหลือ · กด ▲ ▼ เพื่อเลื่อนลำดับ</div>
+    <div id="facePeople"></div>
     <div class="row" style="margin-top:12px">
-      <button class="primary" id="faceRefBtn">🙂 เลือกรูปหน้าอ้างอิง</button>
-      <label>ชื่อ <input type="text" id="faceName" value="" placeholder="เช่น Aom" class="num" style="width:140px"></label>
+      <button id="faceAddBtn">➕ เพิ่มคนถัดไป</button>
       <span class="sub" id="faceRefStatus"></span>
     </div>
-    <div class="refs" id="faceRefs"></div>
     <div id="faceMissing" class="mobilenote" style="display:none">
       ⚠️ หาโฟลเดอร์ <b>face</b> ไม่เจอ (ต้องเปิดไฟล์ index.html จากโฟลเดอร์ที่มีโฟลเดอร์ face อยู่ข้าง ๆ เช่น ไฟล์ที่แตก ZIP ออกมา)<br>
       ถ้ามีโฟลเดอร์ face อยู่ที่อื่น กดปุ่มนี้แล้วเลือกไฟล์ทั้ง 3 ไฟล์ในโฟลเดอร์นั้น (face-api.js, face-models-1.js, face-models-2.js)
@@ -252,13 +264,14 @@ body.fb .toolbar{display:none!important}
   </div>
 
   <div class="panel">
-    <h2 style="margin:0 0 6px;font-size:17px">2. สแกนหารูปที่มีคนนี้</h2>
+    <h2 style="margin:0 0 6px;font-size:17px">2. สแกนหารูปของคนเหล่านี้</h2>
     <div class="row">
       <button class="primary" id="faceScanBtn">📁 เลือกโฟลเดอร์ที่จะค้นหา</button>
       <label id="faceSubWrap"><input type="checkbox" id="faceSub" checked> รวมโฟลเดอร์ย่อย</label>
       <button id="faceStopBtn" style="display:none">⏹ หยุด</button>
       <label title="ยิ่งค่าต่ำ ยิ่งต้องหน้าเหมือนมาก">ความเข้มงวด:
         <input type="range" id="faceThr" min="35" max="65" value="50"><span id="faceThrVal"></span></label>
+      <label title="รูปที่ไม่มีคนในรายชื่อ เช่น รูปคนอื่น หรือรูปวิว"><input type="checkbox" id="faceRest"> แสดงรูปที่เหลือต่อท้าย</label>
     </div>
     <div class="help">
       <b>ความเข้มงวด</b>: บอกว่าหน้าต้องเหมือนรูปอ้างอิงแค่ไหนถึงจะนับว่าเป็นคนเดียวกัน
@@ -392,13 +405,13 @@ if (MOBILE) {
   $('fbPickDir').style.display = 'none';
   $('fbPickFiles').textContent = '📷 เลือกรูปจากอัลบั้ม';
   $('status').textContent = 'ยังไม่ได้เลือกรูป';
-  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 13';
+  $('hdrSub').textContent = 'ทำงานบนมือถือของคุณ รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 16';
 }
 const ANDROID = !!window.AndroidBridge;
 // the APK link points at the file next to this page; hide it inside the app and where that file is not beside the page
 if (ANDROID || IN_FRAME) $('apkLink').style.display = 'none';
 if (ANDROID) {
-  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 13';
+  $('hdrSub').textContent = 'แอป Android · รูปไม่ถูกอัปโหลดไปที่ไหน · เวอร์ชัน 16';
   $('ffNote').innerHTML = '📱 กด "เลือกอัลบั้ม" เพื่อสแกนรูปในมือถือ แล้วกด "ย้ายไปถังขยะ" รูปที่เอาออกจะอยู่ในถังขยะของมือถือ <b>กู้คืนได้ 30 วัน</b>';
   $('pickBtn').textContent = '📂 เลือกอัลบั้ม';
   $('listBtn').style.display = 'none';
@@ -1329,14 +1342,19 @@ async function fbPreview(p) {
 const FACE_MAX = 1024;          // long side the photo is scaled to before looking for faces
 const MIN_FACE = 24;            // smaller faces (in px at that scale) give unreliable fingerprints
 let faceReady = null, faceBusy = false, faceStop = false, faceSlow = false;
-let faceRefs = [];              // {desc, url, on, from}
+let persons = [{ name:'', refs:[] }];   // ranked: index 0 = most important · refs: {desc, url, on, from}
+let faceTarget = null;          // person the reference photos being picked belong to
+let restTouched = false;
+let faceManual = new Map();     // photo id -> person object, or 'rest' (chosen by hand under the photo)        // the user set "show the rest" themselves
 let faceItems = [];             // {id,name,path,file,handle,parent,w,h,size,faces:[{box:[x,y,w,h] as 0..1, desc}],gone}
 let faceOff = new Set();        // matches the user un-ticked
 let faceRoot = null;            // folder scanned on the computer
 let faceLimit = 60;
 const faceStatus = (t, p) => { $('faceStatus').textContent = t; if (p != null) $('faceBar').style.width = (p*100).toFixed(1)+'%'; };
 const fmtDur = ms => { const s = Math.round(ms/1000); return s < 60 ? `${s} วินาที` : s < 3600 ? `${Math.round(s/60)} นาที` : `${(s/3600).toFixed(1)} ชั่วโมง`; };
-const personName = () => ($('faceName').value.trim() || 'person').replace(/[\\/:*?"<>|]/g, '_').replace(/^\.+/, '').slice(0, 60) || 'person';
+const personLabel = p => (persons[p] && persons[p].name.trim()) || `คนที่ ${p+1}`;
+const activePersons = () => persons.map((p, i) => i).filter(i => persons[i].refs.some(r => r.on));
+const personName = () => (activePersons().map(personLabel).join('+') || 'person').replace(/[\\/:*?"<>|]/g, '_').replace(/^\.+/, '').slice(0, 60) || 'person';
 const skipDir = name => name === DUP_DIR || name.startsWith('_facebook_') || name.startsWith('_person_') || name.startsWith('$') || name === 'System Volume Information';
 
 // run a script file the user picked (when the face folder is not beside this page)
@@ -1397,19 +1415,39 @@ function faceCrop(c, box, size) {
   o.getContext('2d').drawImage(c, x + w/2 - s/2, y + h/2 - s/2, s, s, 0, 0, size, size);
   return o.toDataURL('image/jpeg', 0.85);
 }
-function faceDist(it, refs) {
-  let best = Infinity, bf = null;
-  for (const f of it.faces) for (const r of refs) {
-    let s = 0; for (let i = 0; i < 128; i++) { const t = f.desc[i] - r.desc[i]; s += t*t; }
-    const d = Math.sqrt(s); if (d < best) { best = d; bf = f; }
-  }
-  return { d:best, f:bf };
-}
+function descDist(a, b) { let s = 0; for (let i = 0; i < 128; i++) { const t = a[i] - b[i]; s += t*t; } return Math.sqrt(s); }
+// Each face goes to the closest listed person (if close enough); a photo is filed under its most important person.
+// Order: person 1 alone, person 1 with others (fewest people first), person 2 alone, person 2 with others, ..., then the rest.
+// Returns [{it, hits:[{p,f,d}] by rank, rank, solo, d, f}]
 function faceMatches() {
-  const thr = +$('faceThr').value / 100, refs = faceRefs.filter(r => r.on), out = [];
-  if (!refs.length) return out;
-  for (const it of faceItems) { if (it.gone || !it.faces.length) continue; const m = faceDist(it, refs); if (m.d <= thr) out.push({ it, d:m.d, f:m.f }); }
-  return out.sort((a, b) => a.d - b.d);
+  const thr = +$('faceThr').value / 100, act = persons.map(p => p.refs.filter(r => r.on)), out = [];
+  if (!act.some(a => a.length)) return out;
+  const rest = $('faceRest').checked, R = persons.length;
+  for (const it of faceItems) {
+    if (it.gone) continue;
+    const best = new Map(); let near = null;
+    for (const f of it.faces) {
+      let bp = -1, bd = Infinity;
+      act.forEach((refs, p) => { for (const r of refs) { const d = descDist(f.desc, r.desc); if (d < bd) { bd = d; bp = p; } } });
+      if (bp >= 0 && (!near || bd < near.d)) near = { p:bp, f, d:bd };
+      if (bp >= 0 && bd <= thr && !(best.has(bp) && best.get(bp).d <= bd)) best.set(bp, { p:bp, f, d:bd });   // one face per person
+    }
+    const hits = [...best.values()].sort((a, b) => a.p - b.p);
+    const man = faceManual.get(it.id), mi = man === 'rest' ? R : persons.indexOf(man);
+    if (mi >= 0) { out.push({ it, hits, rank:mi, solo:it.faces.length <= 1, d:thr, f:null, near, manual:true }); continue; }
+    if (!hits.length) { if (rest) out.push({ it, hits, rank:R, solo:false, d:0, f:null, near }); continue; }
+    out.push({ it, hits, rank:hits[0].p, solo:it.faces.length === 1, d:hits[0].d, f:hits[0].f, near });
+  }
+  // the rest: near misses first (most likely to be a listed person), photos without faces last
+  const nd = m => m.near ? m.near.d : 9;
+  return out.sort((a, b) => a.rank - b.rank || (a.rank === R ? nd(a) - nd(b) || a.it.id - b.it.id
+    : (b.solo - a.solo) || a.it.faces.length - b.it.faces.length || a.d - b.d));
+}
+const groupKey = m => m.rank + (m.rank === persons.length ? '' : m.solo ? 's' : 'g');
+function groupTitle(m, n) {
+  const c = `<span class="sub">(${n.toLocaleString()} รูป)</span>`;
+  if (m.rank === persons.length) return `รูปที่เหลือ <span class="sub">ไม่มีคนในรายชื่อ</span> ${c}`;
+  return `คนที่ ${m.rank+1}${persons[m.rank].name.trim() ? ' · ' + esc(persons[m.rank].name.trim()) : ''} — ${m.solo ? 'รูปเดี่ยว' : 'อยู่กับคนอื่น'} ${c}`;
 }
 
 // ----- reference faces -----
@@ -1419,28 +1457,65 @@ showFaceThr();
 $('faceThr').oninput = () => { showFaceThr(); faceRender(); };
 function faceLock(on) {
   faceBusy = on;
-  $('faceRefBtn').disabled = on;
+  for (const b of document.querySelectorAll('#facePeople button, #facePeople input, #faceAddBtn')) b.disabled = on;
+  if (!on) renderRefs();
   $('faceScanBtn').disabled = on;
   $('faceCopy').disabled = $('faceCut').disabled = $('faceShare').disabled = on;
 }
-function renderRefs() {
-  const box = $('faceRefs'); box.innerHTML = '';
-  faceRefs.forEach((r, i) => {
-    const d = document.createElement('div'); d.className = 'refface' + (r.on ? ' on' : '');
-    d.innerHTML = `<img alt=""><button class="x" title="เอาออก">✕</button><div>${r.on ? '✓ ใช้ค้นหา' : 'แตะเพื่อเลือก'}</div>`;
-    d.querySelector('img').src = r.url;
-    d.onclick = e => { if (faceBusy) return;
-      if (e.target.classList.contains('x')) faceRefs.splice(i, 1); else r.on = !r.on;
-      renderRefs(); faceRender(); };
-    box.appendChild(d);
-  });
-  const n = faceRefs.filter(r => r.on).length;
-  $('faceScanBtn').disabled = faceBusy;
-  if (faceRefs.length) $('faceRefStatus').textContent = n ? `ใช้ ${n} หน้าในการค้นหา` : 'แตะเลือกหน้าของคนที่ต้องการหา';
+let faceRenderT = 0;
+const faceRenderSoon = () => { clearTimeout(faceRenderT); faceRenderT = setTimeout(faceRender, 400); };
+function pickRefs(pi) { if (faceBusy) return; faceTarget = persons[pi]; $('faceRefInput').value = ''; $('faceRefInput').click(); }
+function movePerson(pi, step) {
+  const j = pi + step; if (faceBusy || j < 0 || j >= persons.length) return;
+  [persons[pi], persons[j]] = [persons[j], persons[pi]]; renderRefs(); faceRender();
 }
-$('faceRefBtn').onclick = () => { if (!faceBusy) { $('faceRefInput').value = ''; $('faceRefInput').click(); } };
+function renderRefs() {
+  const box = $('facePeople'); box.innerHTML = '';
+  const dis = faceBusy ? ' disabled' : '';
+  persons.forEach((p, pi) => {
+    const card = document.createElement('div'); card.className = 'person';
+    card.innerHTML = `<div class="row"><b class="rank">คนที่ ${pi+1}</b>
+      <label>ชื่อ <input type="text" class="num pname" placeholder="${pi ? 'ชื่อ' : 'เช่น พี่นุช'}" style="width:140px"${dis}></label>
+      <button class="${p.refs.length ? '' : 'primary '}padd"${dis}>🙂 ${p.refs.length ? 'เพิ่มรูปหน้า' : 'เลือกรูปหน้าอ้างอิง'}</button>
+      <span class="spacer"></span>
+      ${persons.length > 1 ? `<button class="pup" title="เลื่อนขึ้น (สำคัญกว่า)"${pi ? dis : ' disabled'}>▲</button><button class="pdn" title="เลื่อนลง"${pi < persons.length-1 ? dis : ' disabled'}>▼</button>` : ''}
+      ${persons.length > 1 || p.refs.length ? `<button class="pdel" title="ลบคนนี้ออกจากรายชื่อ"${dis}>✕</button>` : ''}</div><div class="refs"></div>`;
+    const nm = card.querySelector('.pname'); nm.value = p.name;
+    nm.oninput = () => { p.name = nm.value; faceRenderSoon(); };
+    card.querySelector('.padd').onclick = () => pickRefs(pi);
+    if (card.querySelector('.pup')) { card.querySelector('.pup').onclick = () => movePerson(pi, -1); card.querySelector('.pdn').onclick = () => movePerson(pi, 1); }
+    if (card.querySelector('.pdel')) card.querySelector('.pdel').onclick = () => {
+      if (faceBusy || (p.refs.length && !confirm(`ลบ ${personLabel(pi)} ออกจากรายชื่อ?`))) return;
+      persons.splice(pi, 1); if (!persons.length) persons.push({ name:'', refs:[] });
+      renderRefs(); faceRender(); };
+    const refs = card.querySelector('.refs');
+    p.refs.forEach((r, i) => {
+      const d = document.createElement('div'); d.className = 'refface' + (r.on ? ' on' : '');
+      d.innerHTML = `<img alt=""><button class="x" title="เอาออก">✕</button><div>${r.on ? '✓ ใช้ค้นหา' : 'แตะเพื่อเลือก'}</div>`;
+      d.querySelector('img').src = r.url;
+      d.onclick = e => { if (faceBusy) return;
+        if (e.target.classList.contains('x')) p.refs.splice(i, 1); else r.on = !r.on;
+        renderRefs(); faceRender(); };
+      refs.appendChild(d);
+    });
+    box.appendChild(card);
+  });
+  const act = activePersons();
+  $('faceScanBtn').disabled = faceBusy;
+  if (persons.some(p => p.refs.length)) $('faceRefStatus').textContent = act.length
+    ? `ใช้ค้นหา ${act.length} คน (${act.reduce((s, i) => s + persons[i].refs.filter(r => r.on).length, 0)} หน้า)` : 'แตะเลือกหน้าของคนที่ต้องการหา';
+}
+$('faceAddBtn').onclick = () => {
+  if (faceBusy) return;
+  const last = persons[persons.length - 1];
+  if (last.refs.length) persons.push({ name:'', refs:[] });     // an empty last card is reused
+  if (persons.length > 1 && !restTouched) $('faceRest').checked = true;
+  renderRefs(); pickRefs(persons.length - 1);
+};
+$('faceRest').onchange = () => { restTouched = true; faceLimit = 60; faceRender(); };
+renderRefs();
 $('faceRefInput').onchange = async e => {
-  const files = [...e.target.files]; if (!files.length) return;
+  const files = [...e.target.files], p = faceTarget || persons[0]; if (!files.length) return;
   faceLock(true);
   $('faceRefStatus').textContent = 'กำลังเตรียมตัวจดจำใบหน้า (ครั้งแรกใช้เวลาสักครู่)...';
   try { await faceInit(); } catch (err) { $('faceRefStatus').textContent = 'โหลดตัวจดจำใบหน้าไม่ได้: ' + err.message; faceLock(false); return; }
@@ -1452,11 +1527,11 @@ $('faceRefInput').onchange = async e => {
     if (!faces.length) { none.push(f.name); continue; }
     faces.sort((a, b) => b.box[2]*b.box[3] - a.box[2]*a.box[3]);
     if (faces.length > 1) multi = true;
-    for (const fc of faces) faceRefs.push({ desc:fc.desc, url:faceCrop(r.c, fc.box, 120), on:faces.length === 1, from:f.name });
+    for (const fc of faces) p.refs.push({ desc:fc.desc, url:faceCrop(r.c, fc.box, 120), on:faces.length === 1, from:f.name });
   }
   // nothing chosen yet (every photo had several faces): start with the biggest face of the first photo
-  if (faceRefs.length && !faceRefs.some(r => r.on)) faceRefs[0].on = true;
-  if (!$('faceName').value.trim() && files.length === 1) $('faceName').value = files[0].name.replace(/\.[^.]+$/, '').slice(0, 30);
+  if (p.refs.length && !p.refs.some(r => r.on)) p.refs[0].on = true;
+  if (!p.name.trim() && files.length === 1) p.name = files[0].name.replace(/\.[^.]+$/, '').slice(0, 30);
   faceLock(false); renderRefs(); faceRender();
   const msg = [];
   if (multi) msg.push('มีรูปที่เจอหลายหน้า ระบบเลือกหน้าที่ใหญ่ที่สุดให้ก่อน ถ้าไม่ใช่คนที่ต้องการ แตะเปลี่ยนได้ (ขอบสีเขียว = ใช้ค้นหา)');
@@ -1474,10 +1549,10 @@ if (ANDROID) $('faceShare').style.display = '';
 $('faceStopBtn').onclick = () => { faceStop = true; $('faceStopBtn').disabled = true; };
 $('faceScanBtn').onclick = async () => {
   if (faceBusy) return;
-  if (!faceRefs.some(r => r.on)) {
-    alert(faceRefs.length ? 'ยังไม่ได้เลือกหน้าที่จะใช้ค้นหา แตะที่รูปหน้าในข้อ 1 ให้มีขอบสีเขียวก่อน'
+  if (!activePersons().length) {
+    alert(persons.some(p => p.refs.length) ? 'ยังไม่ได้เลือกหน้าที่จะใช้ค้นหา แตะที่รูปหน้าในข้อ 1 ให้มีขอบสีเขียวก่อน'
       : 'ต้องเลือกรูปหน้าอ้างอิงในข้อ 1 ก่อน (กดปุ่ม "เลือกรูปหน้าอ้างอิง")');
-    $('faceRefBtn').scrollIntoView({ behavior:'smooth', block:'center' }); return;
+    $('facePeople').scrollIntoView({ behavior:'smooth', block:'center' }); return;
   }
   if (ANDROID) return faceAndroidPick();
   if (MOBILE) { $('faceInput').value = ''; $('faceInput').click(); return; }
@@ -1529,7 +1604,7 @@ async function faceScan(list) {
   faceStatus('กำลังเตรียมตัวจดจำใบหน้า...', 0);
   try { await faceInit(); } catch (e) { faceStatus('โหลดตัวจดจำใบหน้าไม่ได้: ' + e.message, 0); faceLock(false); return; }
   for (const it of faceItems) if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url);
-  faceItems = []; faceOff = new Set(); faceLimit = 60; $('faceResult').innerHTML = '';
+  faceItems = []; faceOff = new Set(); faceManual = new Map(); faceLimit = 60; $('faceResult').innerHTML = '';
   $('faceStopBtn').style.display = ''; $('faceStopBtn').disabled = false;
   const t0 = Date.now(); let bad = 0, nFaces = 0, i = 0;
   for (; i < list.length && !faceStop; i++) {
@@ -1548,8 +1623,8 @@ async function faceScan(list) {
   }
   $('faceStopBtn').style.display = 'none';
   faceLock(false);
-  const m = faceMatches().length;
-  faceStatus(`${faceStop ? 'หยุดแล้ว · สแกนไป' : 'สแกนเสร็จ'} ${i.toLocaleString()} รูป ใช้เวลา ${fmtDur(Date.now() - t0)} · เจอหน้าทั้งหมด ${nFaces.toLocaleString()} หน้า · พบรูปของคนนี้ ${m.toLocaleString()} รูป` +
+  const m = faceMatches().filter(x => x.hits.length).length;
+  faceStatus(`${faceStop ? 'หยุดแล้ว · สแกนไป' : 'สแกนเสร็จ'} ${i.toLocaleString()} รูป ใช้เวลา ${fmtDur(Date.now() - t0)} · เจอหน้าทั้งหมด ${nFaces.toLocaleString()} หน้า · พบรูปของคนในรายชื่อ ${m.toLocaleString()} รูป` +
     (bad ? ` · อ่านไม่ได้ ${bad} รูป (เช่น HEIC)` : ''), 1);
   faceRender();
 }
@@ -1558,16 +1633,26 @@ async function faceScan(list) {
 function faceRender() {
   const grid = $('faceGrid');
   if (!faceItems.length) { grid.innerHTML = ''; $('faceBarTools').style.display = 'none'; return; }
-  const ms = faceMatches(), thr = +$('faceThr').value / 100;
+  const ms = faceMatches(), thr = +$('faceThr').value / 100, nHit = ms.filter(m => m.hits.length).length, many = activePersons().length > 1;
   grid.innerHTML = '';
   const head = document.createElement('div'); head.className = 'panel';
-  head.innerHTML = ms.length
-    ? `<b>พบรูปที่มีคนนี้ ${ms.length.toLocaleString()} รูป</b> จาก ${faceItems.filter(it => !it.gone).length.toLocaleString()} รูปที่สแกน <span class="sub">· เรียงจากเหมือนมากไปน้อย · กรอบสีเขียวคือหน้าที่ตรงกัน · แตะรูปเพื่อเลือก/ไม่เลือก</span>`
-    : faceItems.some(it => it.gone) ? `<b>ย้ายรูปของคนนี้ออกไปหมดแล้ว</b> <span class="sub">ดูผลด้านบน</span>`
-    : `<b>ยังไม่พบรูปของคนนี้</b> <span class="sub">ลองเพิ่มรูปหน้าอ้างอิงอีกมุม หรือเลื่อนความเข้มงวดให้สูงขึ้น</span>`;
+  head.innerHTML = nHit
+    ? `<b>พบรูปที่มี${many ? 'คนในรายชื่อ' : 'คนนี้'} ${nHit.toLocaleString()} รูป</b>${ms.length > nHit ? ` + รูปที่เหลือ ${(ms.length - nHit).toLocaleString()} รูป` : ''} จาก ${faceItems.filter(it => !it.gone).length.toLocaleString()} รูปที่สแกน
+       <span class="sub">· เรียงตามลำดับคน (รูปเดี่ยวก่อน แล้วรูปที่อยู่กับคนอื่น) · กรอบสีเขียวคือหน้าที่ตรงกัน ตัวเลขบนกรอบคือคนที่เท่าไร · แตะรูปเพื่อเลือก/ไม่เลือก</span>
+       ${ms.length > nHit ? `<div class="sub" style="margin-top:6px">💡 ถ้ามีรูปของคนในรายชื่อตกไปอยู่ใน "รูปที่เหลือ" (มักเป็นรูปหันข้าง อยู่ไกล หรือใส่แว่น/หมวก): ดูรูปที่ขึ้นว่า <b>เกือบใช่</b> (กรอบสีส้ม) ซึ่งอยู่ต้นกลุ่ม แล้วเลือกคนจากเมนูใต้รูป รูปที่มีหน้าเดียวจะถูกเพิ่มเป็นหน้าอ้างอิงให้ด้วย รูปอื่นที่คล้ายกันจะย้ายตามมาเอง · หรือเลื่อนความเข้มงวดขึ้นเป็น 55–58</div>` : ''}`
+    : faceItems.some(it => it.gone) ? `<b>ย้ายรูปของคนในรายชื่อออกไปหมดแล้ว</b> <span class="sub">ดูผลด้านบน</span>`
+    : `<b>ยังไม่พบรูปของคนในรายชื่อ</b> <span class="sub">ลองเพิ่มรูปหน้าอ้างอิงอีกมุม หรือเลื่อนความเข้มงวดให้สูงขึ้น</span>`;
   grid.appendChild(head);
   const wrap = document.createElement('div'); wrap.className = 'fitems'; grid.appendChild(wrap);
-  for (const m of ms.slice(0, faceLimit)) wrap.appendChild(faceEl(m, thr));
+  const counts = new Map(); for (const m of ms) counts.set(groupKey(m), (counts.get(groupKey(m)) || 0) + 1);
+  let key = null;
+  for (const m of ms.slice(0, faceLimit)) {
+    if (groupKey(m) !== key) {
+      key = groupKey(m);
+      const g = document.createElement('div'); g.className = 'fgroup'; g.innerHTML = groupTitle(m, counts.get(key)); wrap.appendChild(g);
+    }
+    wrap.appendChild(faceEl(m, thr));
+  }
   if (ms.length > faceLimit) {
     const more = document.createElement('div'); more.className = 'pager';
     more.innerHTML = `<button>แสดงเพิ่ม (เหลืออีก ${(ms.length - faceLimit).toLocaleString()} รูป)</button>`;
@@ -1580,12 +1665,25 @@ function faceRender() {
 function faceEl(m, thr) {
   const it = m.it, d = document.createElement('div');
   if (!it.url) it.url = it.file.lazy ? it.file.thumbUrl : URL.createObjectURL(it.file);
-  const level = m.d <= thr - 0.08 ? ['เหมือนมาก', ''] : ['น่าจะใช่', ' mid'];
-  const [x, y, w, h] = m.f.box;
-  d.innerHTML = `<div class="fpic" style="aspect-ratio:${it.w}/${it.h}"><img loading="lazy" alt="">
-      <div class="fbox" style="left:${x*100}%;top:${y*100}%;width:${w*100}%;height:${h*100}%"></div>
+  const many = activePersons().length > 1;
+  const boxes = m.hits.map(hh => { const [x, y, w, h] = hh.f.box;
+    return `<div class="fbox" style="left:${x*100}%;top:${y*100}%;width:${w*100}%;height:${h*100}%">${many ? `<b>${hh.p+1}</b>` : ''}</div>`; }).join('');
+  const tags = m.hits.length ? m.hits.map(hh => `<span class="score${hh.d <= thr - 0.08 ? '' : ' mid'}">${many ? esc(persons[hh.p].name.trim() ? `${hh.p+1}. ${persons[hh.p].name.trim()}` : personLabel(hh.p)) : hh.d <= thr - 0.08 ? 'เหมือนมาก' : 'น่าจะใช่'} · ${Math.round(hh.d*100)}</span>`).join(' ')
+    + (m.solo ? ' <span class="sub">รูปเดี่ยว</span>' : ` <span class="sub">${it.faces.length} คนในรูป</span>`)
+    : !it.faces.length ? `<span class="score rest">ไม่เจอหน้าคน</span>`
+    : m.near && m.near.d <= thr + 0.12 ? `<span class="score mid">เกือบใช่: ${esc(personLabel(m.near.p))} · ${Math.round(m.near.d*100)}</span> <span class="sub">(ต้องไม่เกิน ${Math.round(thr*100)})</span>`
+    : `<span class="score rest">${it.faces.length} หน้า ไม่อยู่ในรายชื่อ</span>`;
+  const nearBox = !m.hits.length && m.near && m.near.d <= thr + 0.12 ? (([x, y, w, h]) =>
+    `<div class="fbox near" style="left:${x*100}%;top:${y*100}%;width:${w*100}%;height:${h*100}%"><b>?</b></div>`)(m.near.f.box) : '';
+  const man = faceManual.get(it.id), mv = man === 'rest' ? 'rest' : man ? String(persons.indexOf(man)) : '';
+  const opts = `<option value="">${m.manual ? '↩ ให้ระบบเลือกเอง' : 'ย้ายไปกลุ่ม…'}</option>` + persons.map((p, i) => `<option value="${i}">คนที่ ${i+1}${p.name.trim() ? ' · ' + esc(p.name.trim()) : ''}</option>`).join('') + '<option value="rest">รูปที่เหลือ</option>';
+  d.innerHTML = `<div class="fpic" style="aspect-ratio:${it.w}/${it.h}"><img loading="lazy" alt="">${boxes}${nearBox}
       <input type="checkbox" class="chk"><button class="zoom" title="ดูรูปใหญ่">🔍</button></div>
-    <div class="meta"><span class="score${level[1]}">${level[0]} · ${Math.round(m.d*100)}</span> <span class="name"></span><div class="path sub"></div></div>`;
+    <div class="meta">${m.manual ? `<span class="score manual">เลือกเอง: ${esc(m.rank >= persons.length ? 'รูปที่เหลือ' : personLabel(m.rank))}</span> ` : ''}${tags} <span class="name"></span><div class="path sub"></div>
+    <select class="fassign" title="ระบบจัดผิดกลุ่ม? เลือกเองได้">${opts}</select></div>`;
+  const sel = d.querySelector('.fassign'); sel.value = mv;
+  sel.onclick = e => e.stopPropagation();
+  sel.onchange = () => faceAssign(it, sel.value);
   d.querySelector('img').src = it.url;
   d.querySelector('.name').textContent = it.name;
   d.querySelector('.path').textContent = it.path;
@@ -1596,6 +1694,22 @@ function faceEl(m, thr) {
     faceOff.has(it.id) ? faceOff.delete(it.id) : faceOff.add(it.id); paint(); faceCounts();
   };
   paint(); return d;
+}
+// put a photo in a group by hand; a one-face photo also teaches that person's look (added as a reference face)
+async function faceAssign(it, v) {
+  if (v === '') faceManual.delete(it.id);
+  else if (v === 'rest') faceManual.set(it.id, 'rest');
+  else {
+    const p = persons[+v]; faceManual.set(it.id, p);
+    if (it.faces.length === 1 && !p.refs.some(r => r.desc === it.faces[0].desc)) {
+      const f = it.faces[0], ref = { desc:f.desc, url:'', on:true, from:it.name };
+      p.refs.push(ref);
+      try { const r = await faceCanvas(it.file); ref.url = faceCrop(r.c, f.box, 120); } catch {}
+      renderRefs();
+      $('faceRefStatus').textContent = `เพิ่มหน้าจากรูป ${it.name} เป็นหน้าอ้างอิงของ ${personLabel(+v)} แล้ว รูปอื่นที่หน้าคล้ายกันจะย้ายตามไปด้วย`;
+    }
+  }
+  faceRender();
 }
 const faceSelected = (ms = faceMatches()) => ms.filter(m => !faceOff.has(m.it.id)).map(m => m.it);
 function faceCounts(ms = faceMatches()) {
@@ -1613,20 +1727,31 @@ $('faceShare').onclick = () => {
 };
 
 // ----- copy / cut -----
+// folder for each person when splitting: "คนที่ 1 - พี่นุช", "คนที่ 2 - พี่จรินทร์", ..., "รูปที่เหลือ"
+function rankFolder(r) {
+  if (r >= persons.length) return 'รูปที่เหลือ';
+  const n = persons[r].name.trim();
+  return (`คนที่ ${r+1}` + (n ? ' - ' + n : '')).replace(/[\\/:*?"<>|]/g, '_').replace(/[. ]+$/, '').slice(0, 60);
+}
 async function faceAction(kind) {
   const list = faceSelected(); if (!list.length || faceBusy) return;
   const name = personName();
-  if (ANDROID) return faceAndroidAction(kind, list, name);
+  const rankOf = new Map(faceMatches().map(m => [m.it.id, m.rank]));
+  const many = activePersons().length > 1 || $('faceRest').checked;
+  if (ANDROID) return faceAndroidAction(kind, list, name, rankOf, many);
   if (MOBILE || !faceRoot) return faceSaveMobile(list, name);
   const verb = kind === 'cut' ? 'ย้าย' : 'คัดลอก';
   const ok = await confirmBox(`${verb}รูปของ ${name} (${kind === 'cut' ? 'Cut' : 'Copy'})`,
     `จะ${verb} <b>${list.length}</b> รูป (${fmtSize(list.reduce((s, it) => s + it.size, 0))}) ไปไว้ด้วยกันในโฟลเดอร์ใหม่<br><br>
     <label style="display:flex;align-items:flex-start;margin-bottom:8px"><input type="radio" name="fdest" value="root" checked> <span>ในโฟลเดอร์ที่สแกน: <b>${esc(faceRoot.name)}\\_person_${esc(name)}</b></span></label>
     <label style="display:flex;align-items:flex-start"><input type="radio" name="fdest" value="pick"> <span>เลือกโฟลเดอร์ปลายทางเอง (จะสร้างโฟลเดอร์ <b>${esc(name)}</b> ในนั้น)</span></label><br>` +
+    `<label style="display:flex;align-items:flex-start;margin-bottom:8px"><input type="checkbox" id="fsplit"${many ? ' checked' : ''}> <span>แยกโฟลเดอร์ตามคน (เช่น <b>${esc(rankFolder(0))}</b>, <b>${esc(rankFolder(1))}</b>, ... , <b>รูปที่เหลือ</b>) รูปที่มีหลายคนจะอยู่ในโฟลเดอร์ของคนที่ลำดับสูงสุดในรูป</span></label>` +
+    `<label style="display:flex;align-items:flex-start;margin-bottom:8px"><input type="checkbox" id="fnum"${many ? ' checked' : ''}> <span>ใส่เลขลำดับหน้าชื่อไฟล์ (เช่น 0001_IMG_1234.jpg) ให้รูปในโฟลเดอร์เรียงตามลำดับความสำคัญของคน</span></label>` +
     (kind === 'cut' ? 'รูปจะถูก<b>ย้ายออกจากที่เดิม</b> (ไม่ได้ลบ ย้ายกลับเองได้) ระบบตรวจว่าคัดลอกครบก่อนแล้วค่อยเอาต้นฉบับออก' : 'รูปต้นฉบับยังอยู่ที่เดิม') +
     '<br><span class="sub">ถ้ามีไฟล์ชื่อซ้ำในปลายทาง จะตั้งชื่อใหม่ต่อท้ายด้วย _2, _3 ไม่เขียนทับ</span>', false);
   if (!ok) return;
   let base = faceRoot, sub = '_person_' + name;
+  const num = $('fnum').checked, split = $('fsplit').checked, pad = Math.max(4, String(list.length).length);
   if (document.querySelector('input[name=fdest]:checked').value === 'pick') {
     try { base = await window.showDirectoryPicker({ id:'photo-face-out', mode:'readwrite' }); } catch { return; }
     sub = name;
@@ -1635,24 +1760,35 @@ async function faceAction(kind) {
   if (kind === 'cut' && base !== faceRoot && (await faceRoot.queryPermission({ mode:'readwrite' })) !== 'granted' && (await faceRoot.requestPermission({ mode:'readwrite' })) !== 'granted') { alert('ไม่ได้รับอนุญาตให้ย้ายไฟล์ออกจากโฟลเดอร์ที่สแกน'); return; }
   faceLock(true);
   const t0 = Date.now(), log = [];
-  let dest;
-  try { dest = await base.getDirectoryHandle(sub, { create:true }); } catch (e) { faceLock(false); alert('สร้างโฟลเดอร์ไม่ได้: ' + e.message); return; }
-  const taken = new Set(); for await (const [n] of dest.entries()) taken.add(n.toLowerCase());
+  let top;
+  try { top = await base.getDirectoryHandle(sub, { create:true }); } catch (e) { faceLock(false); alert('สร้างโฟลเดอร์ไม่ได้: ' + e.message); return; }
+  const dirs = new Map();   // folder name ('' = no split) -> {dest, taken, n}
+  async function folder(f) {
+    if (!dirs.has(f)) {
+      const dest = f ? await top.getDirectoryHandle(f, { create:true }) : top;
+      const taken = new Set(); for await (const [n] of dest.entries()) taken.add(n.toLowerCase());
+      dirs.set(f, { dest, taken, n:0 });
+    }
+    return dirs.get(f);
+  }
   for (let i = 0; i < list.length; i++) {
     const it = list[i];
     faceStatus(`กำลัง${verb} ${i+1}/${list.length}: ${it.path}`, i / list.length);
     try {
-      if (it.parent && await it.parent.isSameEntry(dest)) { log.push({ it, ok:true, out:it.name, note:'อยู่ในโฟลเดอร์นี้อยู่แล้ว' }); continue; }
+      const fname = split ? rankFolder(rankOf.get(it.id) ?? persons.length) : '';
+      const { dest, taken } = await folder(fname), seq = ++dirs.get(fname).n;
+      if (!num && it.parent && await it.parent.isSameEntry(dest)) { log.push({ it, ok:true, out:it.name, note:'อยู่ในโฟลเดอร์นี้อยู่แล้ว' }); continue; }
       const file = await it.handle.getFile();
-      const b = it.name.replace(/\.[^.]+$/, ''), e = it.name.slice(b.length);
+      const want = num ? String(seq).padStart(pad, '0') + '_' + it.name : it.name;
+      const b = want.replace(/\.[^.]+$/, ''), e = want.slice(b.length);
       // the same photo copied earlier (same name and size): do not make a second copy
       let same = null;
-      if (taken.has(it.name.toLowerCase())) try { const h = await dest.getFileHandle(it.name); if ((await h.getFile()).size === file.size) same = h; } catch {}
+      if (taken.has(want.toLowerCase())) try { const h = await dest.getFileHandle(want); if ((await h.getFile()).size === file.size) same = h; } catch {}
       if (same) {
         if (kind === 'cut') { await it.parent.removeEntry(it.name); it.gone = true; if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url); }
-        log.push({ it, ok:true, out:it.name, note:'มีอยู่ในปลายทางแล้ว ไม่ได้คัดลอกซ้ำ' }); continue;
+        log.push({ it, ok:true, out:(fname ? fname + '\\' : '') + want, note:'มีอยู่ในปลายทางแล้ว ไม่ได้คัดลอกซ้ำ' }); continue;
       }
-      let out = it.name; for (let k = 2; taken.has(out.toLowerCase()); k++) out = `${b}_${k}${e}`;
+      let out = want; for (let k = 2; taken.has(out.toLowerCase()); k++) out = `${b}_${k}${e}`;
       const fh = await dest.getFileHandle(out, { create:true });
       const w = await fh.createWritable(); await w.write(file); await w.close();
       taken.add(out.toLowerCase());
@@ -1662,7 +1798,7 @@ async function faceAction(kind) {
         it.gone = true;
         if (it.url && it.url.startsWith('blob:')) URL.revokeObjectURL(it.url);
       }
-      log.push({ it, ok:true, out });
+      log.push({ it, ok:true, out:(fname ? fname + '\\' : '') + out });
     } catch (e) { log.push({ it, ok:false, err:e.message }); }
     if (i % 5 === 4) await tick();
   }
@@ -1673,8 +1809,9 @@ async function faceAction(kind) {
 }
 // phone browser: the web cannot write into the album, so offer the photos to save (share sheet / ZIP)
 async function faceSaveMobile(list, name) {
-  const used = new Set(), files = list.map(it => {
-    let n = it.name; const b = n.replace(/\.[^.]+$/, ''), e = n.slice(b.length);
+  const num = activePersons().length > 1 || $('faceRest').checked, pad = Math.max(4, String(list.length).length);
+  const used = new Set(), files = list.map((it, i) => {
+    let n = num ? String(i + 1).padStart(pad, '0') + '_' + it.name : it.name; const b = n.replace(/\.[^.]+$/, ''), e = n.slice(b.length);
     for (let k = 2; used.has(n.toLowerCase()); k++) n = `${b}_${k}${e}`; used.add(n.toLowerCase());
     return new File([it.file], n, { type: it.file.type || 'image/jpeg' }); });
   const box = $('faceResult');
@@ -1687,19 +1824,22 @@ async function faceSaveMobile(list, name) {
   box.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 // Android app: copy into a new album (Pictures/<name>); cut = copy, then the phone moves the originals to its trash
-async function faceAndroidAction(kind, list, name) {
+async function faceAndroidAction(kind, list, name, rankOf, many) {
   const verb = kind === 'cut' ? 'ย้าย' : 'คัดลอก';
   const ok = await confirmBox(`${verb}รูปของ ${name} (${kind === 'cut' ? 'Cut' : 'Copy'})`,
-    `จะ${verb} <b>${list.length}</b> รูป ไปไว้ในอัลบั้มใหม่ <b>${esc(name)}</b> (Pictures/${esc(name)})<br><br>` +
+    `จะ${verb} <b>${list.length}</b> รูป ไปไว้ในอัลบั้มใหม่<br><br>
+    <label style="display:flex;align-items:flex-start;margin-bottom:8px"><input type="radio" name="fsplit" value="one"${many ? '' : ' checked'}> <span>รวมอัลบั้มเดียว: <b>${esc(name)}</b></span></label>
+    <label style="display:flex;align-items:flex-start;margin-bottom:8px"><input type="radio" name="fsplit" value="split"${many ? ' checked' : ''}> <span>แยกอัลบั้มตามคน: <b>${esc(rankFolder(0))}</b>, <b>${esc(rankFolder(1))}</b>, ... , <b>รูปที่เหลือ</b></span></label><br>` +
     (kind === 'cut' ? 'แอปจะคัดลอกให้ครบก่อน แล้วมือถือจะถามยืนยันเพื่อย้ายรูปเดิมไปถังขยะ (กู้คืนได้ภายใน 30 วัน)' : 'รูปเดิมยังอยู่ที่เดิม'), false);
   if (!ok) return;
+  const split = document.querySelector('input[name=fsplit]:checked').value === 'split';
   faceLock(true);
   const t0 = Date.now(), log = [];
   for (let i = 0; i < list.length; i++) {
-    const it = list[i];
+    const it = list[i], alb = split ? rankFolder(rankOf.get(it.id) ?? persons.length) : name;
     faceStatus(`กำลังคัดลอก ${i+1}/${list.length}: ${it.name}`, i / list.length);
-    const r = AndroidBridge.copyToAlbum(String(it.file.mediaId), name);
-    log.push(r ? { it, ok:true, out:`Pictures/${name}/${r}` } : { it, ok:false, err:'คัดลอกไม่สำเร็จ' });
+    const r = AndroidBridge.copyToAlbum(String(it.file.mediaId), alb);
+    log.push(r ? { it, ok:true, out:`Pictures/${alb}/${r}` } : { it, ok:false, err:'คัดลอกไม่สำเร็จ' });
     await tick();
   }
   if (kind === 'cut') {
@@ -1719,7 +1859,7 @@ async function faceAndroidAction(kind, list, name) {
   }
   faceLock(false);
   faceStatus(`${verb}เสร็จ ${log.filter(l => l.ok).length}/${list.length} รูป`, 1);
-  faceShowResult(kind, `อัลบั้ม ${name} (Pictures/${name})`, log, Date.now() - t0);
+  faceShowResult(kind, split ? 'อัลบั้มแยกตามคน (Pictures/' + rankFolder(0) + ', ...)' : `อัลบั้ม ${name} (Pictures/${name})`, log, Date.now() - t0);
   faceRender();
 }
 function faceShowResult(kind, where, log, ms) {
